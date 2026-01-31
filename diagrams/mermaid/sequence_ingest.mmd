@@ -1,0 +1,14 @@
+sequenceDiagram
+  participant User
+  participant Frontend
+  participant Gateway
+  participant Habits
+  participant AIBrain
+  participant DB as VectorDB
+
+  User->>Frontend: Click "DO IT" (POST /habits/complete/1)
+  Frontend->>Gateway: Route to /habits
+  Gateway->>Habits: Save completion to DB
+  Habits->>AIBrain: POST /ingest/habit {user_id, text, metadata}
+  AIBrain->>DB: Generate embedding & store memory
+  AIBrain-->>Frontend: {status: ingested, memory_id}

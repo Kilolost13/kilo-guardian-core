@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "reminder"
+version = "0.1.0"
+description = "Reminder microservice"
+authors = ["Kilo <kilo@example.com>"]
+
+[tool.poetry.dependencies]
+python = ">=3.11,<4.0"
+fastapi = "^0.100"
+uvicorn = "^0.22"
+sqlmodel = "^0.0.8"
+apscheduler = "^3.10.4"
+
+[build-system]
+requires = ["poetry-core>=1.5.0"]
+build-backend = "poetry.core.masonry.api"

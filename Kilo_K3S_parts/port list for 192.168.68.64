@@ -1,0 +1,16 @@
+KILO GUARDIAN CORE SERVICES
+┌─────────────────────────────┬──────────────────┬────────────┐
+│ Service                     │ Status           │ Port       │
+├─────────────────────────────┼──────────────────┼────────────┤
+│ ai_brain                    │ ✓ Healthy       │ 9004       │
+│ gateway                     │ ✓ Healthy       │ 8000       │
+│ frontend                    │ ✓ Healthy       │ 3000       │
+│ habits                      │ ✓ Healthy       │ 9003       │
+│ meds                        │ ✓ Healthy       │ 9001       │
+│ reminder                    │ ✓ Healthy       │ 9002       │
+│ library_of_truth            │ ✓ Healthy       │ 9006       │
+│ ollama                      │ ✓ Healthy       │ 11434      │
+│ cam                         │ ✓ Healthy       │ 9007       │
+│ financial                   │ ✓ Healthy       │ 9005       │
+└─────────────────────────────┴──────────────────┴────────────┘
+

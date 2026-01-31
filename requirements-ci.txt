@@ -1,0 +1,21 @@
+fastapi
+uvicorn
+sqlmodel
+SQLAlchemy
+requests
+httpx
+pydantic
+pytest
+python-multipart
+pytesseract
+pillow
+alembic
+APScheduler
+networkx
+# Additional CI/test deps added by automation
+prometheus_client
+python-socketio
+bcrypt
+numpy
+opencv-python-headless
+cryptography

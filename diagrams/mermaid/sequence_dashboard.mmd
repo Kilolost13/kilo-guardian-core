@@ -1,0 +1,14 @@
+sequenceDiagram
+  participant User
+  participant Frontend
+  participant Gateway
+  participant AIBrain
+  participant MLEngine
+
+  User->>Frontend: Open Dashboard
+  Frontend->>Gateway: GET /dashboard data
+  Gateway->>AIBrain: POST /ai_brain/query {query, limit}
+  Gateway->>MLEngine: POST /ml/predict/patterns {user_id}
+  AIBrain-->>Frontend: insights
+  MLEngine-->>Frontend: patterns
+  Frontend-->>User: Render insights & patterns

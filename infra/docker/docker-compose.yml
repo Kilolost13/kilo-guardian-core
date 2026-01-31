@@ -1,0 +1,340 @@
+version: '3.8'
+
+services:
+  gateway:
+    container_name: kilo_gateway
+    image: kilo/gateway:latest
+    build: ../../services/gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - ALLOW_NETWORK=false  # Air-gapped deployment: no external network access
+      - MEDS_URL=http://meds:9001
+      - REMINDER_URL=http://reminder:9002
+      - HABITS_URL=http://habits:9003
+      - AI_BRAIN_URL=http://ai_brain:9004
+      - FINANCIAL_URL=http://financial:9005
+      - LIBRARY_OF_TRUTH_URL=http://library_of_truth:9006
+      - CAM_URL=http://cam:9007
+      - ML_ENGINE_URL=http://ml_engine:9008
+      - VOICE_URL=http://voice:9009
+      - USB_TRANSFER_URL=http://usb_transfer:8006
+      - LIBRARY_ADMIN_KEY=${LIBRARY_ADMIN_KEY}
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    volumes:
+      - gateway_data:/data
+    depends_on:
+      ai_brain:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys,urllib.request as u; sys.exit(0) if u.urlopen('http://localhost:8000/status',timeout=3).getcode()<400 else sys.exit(1)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      - default
+
+  ai_brain:
+    container_name: kilo_ai_brain
+    image: kilo/ai_brain:latest
+    build:
+      context: ../..
+      dockerfile: services/ai_brain/Dockerfile
+    ports:
+      - "9004:9004"
+    environment:
+      - ALLOW_NETWORK=false  # Air-gapped deployment: no external network access
+      - STT_PROVIDER=none  # Use local Whisper via voice service
+      - TTS_PROVIDER=none  # Use local Piper via voice service
+      - LIBRARY_URL=http://library_of_truth:9006
+      - OLLAMA_URL=http://ollama:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.1:8b}  # Read from .env, fallback to llama3.1:8b
+      - LLM_PROVIDER=ollama
+      - METRICS_TOKEN=${LIBRARY_ADMIN_KEY}
+    command: uvicorn ai_brain.main:app --host 0.0.0.0 --port 9004
+    volumes:
+      - ai_brain_data:/data
+    depends_on:
+      - ollama
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys,urllib.request as u; sys.exit(0) if u.urlopen('http://localhost:9004/status',timeout=3).getcode()<400 else sys.exit(1)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      - default
+
+  ollama:
+    container_name: kilo_ollama
+    image: ollama/ollama:latest
+    # host port binding removed so a local Ollama process won't prevent the container starting
+    environment:
+      - OLLAMA_NUM_PARALLEL=2  # Beelink SER7-9 can handle 2 concurrent requests
+      - OLLAMA_MAX_LOADED_MODELS=2
+      # - OLLAMA_GPU_LAYERS=33  # Use AMD Radeon 780M integrated GPU
+      - OLLAMA_KEEP_ALIVE=5m  # Keep model in memory for 5 minutes
+    volumes:
+      - ollama_models:/root/.ollama
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: amd  # AMD GPU support
+    #           count: 1
+    #           capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - default
+
+  cam:
+    container_name: kilo_cam
+    image: kilo/cam:latest
+    build: ../../services/cam
+    ports:
+      - "9007:9007"
+    environment:
+      - ALLOW_NETWORK=false  # Air-gapped deployment: no external network access
+      - AI_BRAIN_URL=http://ai_brain:9004
+    command: uvicorn main:app --host 0.0.0.0 --port 9007
+    devices:
+      - /dev/video0:/dev/video0  # External camera 1 (or tablet camera)
+      - /dev/video1:/dev/video1  # External camera 2
+      - /dev/bus/usb:/dev/bus/usb  # USB device access for camera communication
+      # Add more cameras as needed:
+      # - /dev/video2:/dev/video2  # External camera 3
+      # - /dev/video3:/dev/video3  # External camera 4
+    privileged: false
+    depends_on:
+      ai_brain:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys,urllib.request as u; sys.exit(0) if u.urlopen('http://localhost:9007/status',timeout=3).getcode()<400 else sys.exit(1)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      - default
+
+  financial:
+    container_name: kilo_financial
+    image: kilo/financial:latest
+    build:
+      context: ../..
+      dockerfile: services/financial/Dockerfile
+    ports:
+      - "9005:9005"
+    environment:
+      - ALLOW_NETWORK=false  # Air-gapped deployment: no external network access
+      - AI_BRAIN_URL=http://ai_brain:9004
+    command: uvicorn main:app --host 0.0.0.0 --port 9005
+    volumes:
+      - financial_data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys,urllib.request as u; sys.exit(0) if u.urlopen('http://localhost:9005/status',timeout=3).getcode()<400 else sys.exit(1)"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - default
+
+  habits:
+    container_name: kilo_habits
+    image: kilo/habits:latest
+    build: ../../services/habits
+    ports:
+      - "9003:9003"
+    environment:
+      - ALLOW_NETWORK=false  # Air-gapped deployment: no external network access
+      - AI_BRAIN_URL=http://ai_brain:9004
+    command: uvicorn main:app --host 0.0.0.0 --port 9003
+    volumes:
+      - habits_data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys,urllib.request as u; sys.exit(0) if u.urlopen('http://localhost:9003/status',timeout=3).getcode()<400 else sys.exit(1)"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - default
+
+  library_of_truth:
+    container_name: kilo_library
+    image: kilo/library_of_truth:latest
+    build: ../../services/library_of_truth
+    ports:
+      - "9006:9006"
+    environment:
+      - ALLOW_NETWORK=false  # Air-gapped deployment: no external network access
+      - ADMIN_KEY=${LIBRARY_ADMIN_KEY:?LIBRARY_ADMIN_KEY must be set in environment}
+    command: uvicorn main:app --host 0.0.0.0 --port 9006
+    volumes:
+      - library_data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys,urllib.request as u; sys.exit(0) if u.urlopen('http://localhost:9006/status',timeout=3).getcode()<400 else sys.exit(1)"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - default
+
+  meds:
+    container_name: kilo_meds
+    image: kilo/meds:latest
+    build: ../../services/meds
+    ports:
+      - "9001:9001"
+    environment:
+      - ALLOW_NETWORK=false  # Air-gapped deployment: no external network access
+      - AI_BRAIN_URL=http://ai_brain:9004
+    command: uvicorn main:app --host 0.0.0.0 --port 9001
+    volumes:
+      - meds_data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys,urllib.request as u; sys.exit(0) if u.urlopen('http://localhost:9001/status',timeout=3).getcode()<400 else sys.exit(1)"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - default
+
+  reminder:
+    container_name: kilo_reminder
+    image: kilo/reminder:latest
+    build:
+      context: ../..
+      dockerfile: services/reminder/Dockerfile
+    ports:
+      - "9002:9002"
+    environment:
+      - ALLOW_NETWORK=false  # Air-gapped deployment: no external network access
+    command: uvicorn main:app --host 0.0.0.0 --port 9002
+    volumes:
+      - reminder_data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys,urllib.request as u; sys.exit(0) if u.urlopen('http://localhost:9002/',timeout=3).getcode()<400 else sys.exit(1)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      - default
+
+  ml_engine:
+    container_name: kilo_ml_engine
+    image: kilo/ml_engine:latest
+    build: ../../services/ml_engine
+    ports:
+      - "9008:9008"
+    environment:
+      - ALLOW_NETWORK=false  # Air-gapped deployment: no external network access
+      - HABITS_URL=http://habits:9003
+      - AI_BRAIN_URL=http://ai_brain:9004
+    command: uvicorn main:app --host 0.0.0.0 --port 9008
+    volumes:
+      - ml_models:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys,urllib.request as u; sys.exit(0) if u.urlopen('http://localhost:9008/status',timeout=3).getcode()<400 else sys.exit(1)"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - default
+
+  frontend:
+    container_name: kilo_frontend
+    image: kilo/frontend:latest
+    build:
+      context: ../../frontend/kilo-react-frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+      - "3443:443"
+    environment:
+      - ALLOW_NETWORK=false  # Air-gapped deployment: no external network access
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - default
+
+  voice:
+    container_name: kilo_voice
+    image: kilo/voice:latest
+    build: ../../services/voice
+    ports:
+      - "9009:9009"
+    environment:
+      - ALLOW_NETWORK=false  # Air-gapped deployment: no external network access
+      - STT_PROVIDER=whisper
+      - TTS_PROVIDER=piper
+    command: uvicorn main:app --host 0.0.0.0 --port 9009
+    volumes:
+      - voice_data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys,urllib.request as u; sys.exit(0) if u.urlopen('http://localhost:9009/status',timeout=3).getcode()<400 else sys.exit(1)"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - default
+
+  usb_transfer:
+    container_name: kilo_usb_transfer
+    image: kilo/usb_transfer:latest
+    build:
+      context: ../..
+      dockerfile: services/usb_transfer/Dockerfile
+    ports:
+      - "8006:8006"
+    environment:
+      - ALLOW_NETWORK=false  # Air-gapped deployment: no external network access
+    command: uvicorn main:app --host 0.0.0.0 --port 8006
+    volumes:
+      - usb_config:/etc/kilo
+      - /media:/media:ro  # Read-only access to mounted USB devices
+      - /mnt:/mnt:ro      # Read-only access to mounted USB devices
+    devices:
+      - /dev/bus/usb:/dev/bus/usb  # USB device access for detection
+    privileged: false
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys,urllib.request as u; sys.exit(0) if u.urlopen('http://localhost:8006/health',timeout=3).getcode()<400 else sys.exit(1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    networks:
+      - default
+
+volumes:
+  gateway_data:
+  ai_brain_data:
+  library_data:
+  meds_data:
+  reminder_data:
+  financial_data:
+  habits_data:
+  ollama_models:  # Persistent storage for Ollama models (Llama 3.1 8B)
+  ml_models:  # Persistent storage for trained ML models
+  voice_data:  # Persistent storage for voice models (Whisper, Piper)
+  usb_config:  # Persistent storage for USB transfer security configuration
+
+networks:
+  default:
+    driver: bridge

@@ -1,0 +1,156 @@
+version: '3.8'
+
+# Lightweight test configuration for older hardware
+# Skips Ollama LLM to save ~2GB RAM and reduce CPU load
+# All ML features, habits, finance, meds still work!
+
+services:
+  gateway:
+    build: ../../services/gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - ALLOW_NETWORK=false
+      - MEDS_URL=http://meds:9001
+      - REMINDER_URL=http://reminder:9002
+      - HABITS_URL=http://habits:9003
+      - AI_BRAIN_URL=http://ai_brain:9004
+      - FINANCIAL_URL=http://financial:9005
+      - LIBRARY_OF_TRUTH_URL=http://library_of_truth:9006
+      - ML_ENGINE_URL=http://ml_engine:9008
+      - VOICE_URL=http://voice:9009
+    volumes:
+      - gateway_data:/data
+    depends_on:
+      - ai_brain
+      - reminder
+    networks:
+      - default
+
+  ai_brain:
+    build: ../../services/ai_brain
+    ports:
+      - "9004:9004"
+    environment:
+      - ALLOW_NETWORK=false
+      - STT_PROVIDER=none
+      - TTS_PROVIDER=none
+      - LIBRARY_URL=http://library_of_truth:9006
+      - OLLAMA_URL=http://localhost:11434  # Disabled for testing
+      - LLM_PROVIDER=none  # Skip LLM for lightweight testing
+    volumes:
+      - ai_brain_data:/data
+    networks:
+      - default
+
+  financial:
+    build: ../../services/financial
+    ports:
+      - "9005:9005"
+    environment:
+      - ALLOW_NETWORK=false
+      - AI_BRAIN_URL=http://ai_brain:9004
+    volumes:
+      - financial_data:/data
+    networks:
+      - default
+
+  habits:
+    build: ../../services/habits
+    ports:
+      - "9003:9003"
+    environment:
+      - ALLOW_NETWORK=false
+      - AI_BRAIN_URL=http://ai_brain:9004
+    volumes:
+      - habits_data:/data
+    networks:
+      - default
+
+  library_of_truth:
+    build: ../../services/library_of_truth
+    ports:
+      - "9006:9006"
+    environment:
+      - ALLOW_NETWORK=false
+      - ADMIN_KEY=${LIBRARY_ADMIN_KEY:-test123}  # Default test key
+    volumes:
+      - library_data:/data
+    networks:
+      - default
+
+  meds:
+    build: ../../services/meds
+    ports:
+      - "9001:9001"
+    environment:
+      - ALLOW_NETWORK=false
+      - AI_BRAIN_URL=http://ai_brain:9004
+    volumes:
+      - meds_data:/data
+    networks:
+      - default
+
+  reminder:
+    build: ../../services/reminder
+    ports:
+      - "9002:9002"
+    environment:
+      - ALLOW_NETWORK=false
+    volumes:
+      - reminder_data:/data
+    networks:
+      - default
+
+  ml_engine:
+    build: ../../services/ml_engine
+    ports:
+      - "9008:9008"
+    environment:
+      - ALLOW_NETWORK=false
+      - HABITS_URL=http://habits:9003
+      - AI_BRAIN_URL=http://ai_brain:9004
+    volumes:
+      - ml_models:/data
+    networks:
+      - default
+
+  frontend:
+    build:
+      context: ../../frontend/kilo-react-frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+      - "3443:443"
+    environment:
+      - ALLOW_NETWORK=false
+    networks:
+      - default
+
+  voice:
+    build: ../../services/voice
+    ports:
+      - "9009:9009"
+    environment:
+      - ALLOW_NETWORK=false
+      - STT_PROVIDER=none  # Whisper disabled for testing
+      - TTS_PROVIDER=none  # Piper disabled for testing
+    volumes:
+      - voice_data:/data
+    networks:
+      - default
+
+volumes:
+  gateway_data:
+  ai_brain_data:
+  library_data:
+  meds_data:
+  reminder_data:
+  financial_data:
+  habits_data:
+  ml_models:
+  voice_data:
+
+networks:
+  default:
+    driver: bridge

@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kilo-tablet-ingress
+  namespace: kilo-guardian
+  annotations:
+    kubernetes.io/ingress.class: traefik
+spec:
+  tls:
+  - hosts:
+    - tablet.kilo.local
+    secretName: tablet-tls
+  rules:
+  - host: tablet.kilo.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: kilo-frontend
+            port:
+              number: 80

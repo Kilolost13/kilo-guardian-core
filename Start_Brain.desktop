@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=1. Start Brain
+Exec=gnome-terminal -- /home/brain_ai/Desktop/start_brain.sh
+Icon=utilities-terminal
+Terminal=false

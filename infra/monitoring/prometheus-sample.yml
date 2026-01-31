@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'ai_brain_via_gateway'
+    metrics_path: /admin/ai_brain/metrics
+    scheme: http
+    static_configs:
+      - targets: ['gateway:8000']
+    # Use a bearer token file containing a gateway admin token
+    bearer_token_file: /etc/prometheus/secrets/gateway_admin_token
+    honor_labels: true
+
+# Note: This sample assumes Prometheus is running in the same Docker network and can resolve 'gateway'.
+# To use it:
+# 1. Generate an admin token via: curl -X POST http://<gateway>/admin/tokens
+# 2. Save the returned token into /etc/prometheus/secrets/gateway_admin_token
+# 3. Mount the file into your Prometheus container at that path and start Prometheus with this config.

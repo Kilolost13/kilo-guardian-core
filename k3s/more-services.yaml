@@ -1,0 +1,309 @@
+# Additional deployments for remaining microservices
+# Use patterns similar to ai_brain deployment (image: kilo/<service>:latest)
+
+---
+# Meds
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kilo-meds
+  namespace: kilo-guardian
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: kilo-meds}
+  template:
+    metadata: {labels: {app: kilo-meds}}
+    spec:
+      containers:
+      - name: meds
+        image: kilo/meds:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9001
+        livenessProbe:
+          httpGet: {path: /health, port: 9001}
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet: {path: /health, port: 9001}
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests: {cpu: "100m", memory: "128Mi"}
+          limits: {cpu: "500m", memory: "512Mi"}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: kilo-meds, namespace: kilo-guardian}
+spec:
+  type: ClusterIP
+  selector: {app: kilo-meds}
+  ports:
+  - name: http
+    port: 9001
+    targetPort: 9001
+
+---
+# Reminder
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: kilo-reminder, namespace: kilo-guardian}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: kilo-reminder}}
+  template:
+    metadata: {labels: {app: kilo-reminder}}
+    spec:
+      containers:
+      - name: reminder
+        image: kilo/reminder:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9002
+        livenessProbe:
+          httpGet: {path: /, port: 9002}
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet: {path: /, port: 9002}
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests: {cpu: "100m", memory: "128Mi"}
+          limits: {cpu: "500m", memory: "512Mi"}
+
+---
+apiVersion: v1
+kind: Service
+metadata: {name: kilo-reminder, namespace: kilo-guardian}
+spec:
+  type: ClusterIP
+  selector: {app: kilo-reminder}
+  ports:
+  - name: http
+    port: 9002
+    targetPort: 9002
+
+---
+# Habits
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: kilo-habits, namespace: kilo-guardian}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: kilo-habits}}
+  template:
+    metadata: {labels: {app: kilo-habits}}
+    spec:
+      containers:
+      - name: habits
+        image: kilo/habits:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9003
+        livenessProbe:
+          httpGet: {path: /health, port: 9003}
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet: {path: /health, port: 9003}
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests: {cpu: "100m", memory: "128Mi"}
+          limits: {cpu: "500m", memory: "512Mi"}
+
+---
+apiVersion: v1
+kind: Service
+metadata: {name: kilo-habits, namespace: kilo-guardian}
+spec:
+  type: ClusterIP
+  selector: {app: kilo-habits}
+  ports:
+  - name: http
+    port: 9003
+    targetPort: 9003
+
+---
+# Financial
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: kilo-financial, namespace: kilo-guardian}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: kilo-financial}}
+  template:
+    metadata: {labels: {app: kilo-financial}}
+    spec:
+      containers:
+      - name: financial
+        image: kilo/financial:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9005
+
+---
+apiVersion: v1
+kind: Service
+metadata: {name: kilo-financial, namespace: kilo-guardian}
+spec:
+  type: ClusterIP
+  selector: {app: kilo-financial}
+  ports:
+  - name: http
+    port: 9005
+    targetPort: 9005
+
+---
+# ML Engine
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: kilo-ml-engine, namespace: kilo-guardian}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: kilo-ml-engine}}
+  template:
+    metadata: {labels: {app: kilo-ml-engine}}
+    spec:
+      containers:
+      - name: ml-engine
+        image: kilo/ml_engine:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9008
+
+---
+apiVersion: v1
+kind: Service
+metadata: {name: kilo-ml-engine, namespace: kilo-guardian}
+spec:
+  type: ClusterIP
+  selector: {app: kilo-ml-engine}
+  ports:
+  - name: http
+    port: 9008
+    targetPort: 9008
+
+---
+# USB Transfer
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: kilo-usb-transfer, namespace: kilo-guardian}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: kilo-usb-transfer}}
+  template:
+    metadata: {labels: {app: kilo-usb-transfer}}
+    spec:
+      containers:
+      - name: usb-transfer
+        image: kilo/usb_transfer:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8006
+
+---
+apiVersion: v1
+kind: Service
+metadata: {name: kilo-usb-transfer, namespace: kilo-guardian}
+spec:
+  type: ClusterIP
+  selector: {app: kilo-usb-transfer}
+  ports:
+  - name: http
+    port: 8006
+    targetPort: 8006
+
+---
+# Library of Truth
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: kilo-library, namespace: kilo-guardian}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: kilo-library}}
+  template:
+    metadata: {labels: {app: kilo-library}}
+    spec:
+      containers:
+      - name: library
+        image: kilo/library_of_truth:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9006
+        envFrom:
+        - secretRef: {name: library-admin}
+
+---
+apiVersion: v1
+kind: Service
+metadata: {name: kilo-library, namespace: kilo-guardian}
+spec:
+  type: ClusterIP
+  selector: {app: kilo-library}
+  ports:
+  - name: http
+    port: 9006
+    targetPort: 9006
+
+---
+# Camera
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: kilo-cam, namespace: kilo-guardian}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: kilo-cam}}
+  template:
+    metadata: {labels: {app: kilo-cam}}
+    spec:
+      containers:
+      - name: cam
+        image: kilo/cam:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9007
+
+---
+apiVersion: v1
+kind: Service
+metadata: {name: kilo-cam, namespace: kilo-guardian}
+spec:
+  type: ClusterIP
+  selector: {app: kilo-cam}
+  ports:
+  - name: http
+    port: 9007
+    targetPort: 9007
+
+---
+# Voice
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: kilo-voice, namespace: kilo-guardian}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: kilo-voice}}
+  template:
+    metadata: {labels: {app: kilo-voice}}
+    spec:
+      containers:
+      - name: voice
+        image: kilo/voice:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9009
+
+---
+apiVersion: v1
+kind: Service
+metadata: {name: kilo-voice, namespace: kilo-guardian}
+spec:
+  type: ClusterIP
+  selector: {app: kilo-voice}
+  ports:
+  - name: http
+    port: 9009
+    targetPort: 9009

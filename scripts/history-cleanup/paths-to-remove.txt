@@ -1,0 +1,9 @@
+# Paths to remove from history (examples collected from repo audit)
+chrome/linux-145.0.7593.0/chrome-linux64/chrome
+chrome/linux-145.0.7593.0/chrome-linux64/WidevineCdm/_platform_specific/linux_x64/libwidevinecdm.so
+chrome/linux-145.0.7593.0/chrome-linux64/resources.pak
+chrome/linux-145.0.7593.0/chrome-linux64/icudtl.dat
+caddy
+ollama
+# Add any model weights, PDFs, or other large files you want removed (one per line)
+# e.g. library_of_truth/books/large_book.pdf

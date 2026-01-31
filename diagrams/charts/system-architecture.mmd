@@ -1,0 +1,94 @@
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#4CAF50','primaryTextColor':'#fff','primaryBorderColor':'#2E7D32','lineColor':'#2196F3','secondaryColor':'#FFC107','tertiaryColor':'#fff'}}}%%
+
+graph TB
+    subgraph "User Interfaces"
+        UI1[Web UI<br/>React + TypeScript<br/>Port 3000]
+        UI2[Voice Interface<br/>Whisper STT<br/>Piper TTS]
+        UI3[Camera<br/>OpenCV + OCR<br/>/dev/video]
+        UI4[USB Transfer<br/>Secure Import/Export]
+    end
+
+    subgraph "API Gateway"
+        GW[Gateway Service<br/>Port 8000<br/>Request Routing]
+    end
+
+    subgraph "Core Services Layer"
+        S1[AI Brain<br/>9004<br/>RAG + LLM + Memory]
+        S2[Medications<br/>9001<br/>CRUD + OCR]
+        S3[Habits<br/>9003<br/>Tracking + Analytics]
+        S4[Finance<br/>9005<br/>Budget + Expenses]
+        S5[Voice<br/>9009<br/>STT + TTS]
+    end
+
+    subgraph "Supporting Services"
+        S6[Reminders<br/>9002<br/>Scheduling]
+        S7[Camera<br/>9007<br/>Activity Detection]
+        S8[ML Engine<br/>9008<br/>Predictions]
+        S9[Library<br/>9006<br/>Knowledge Store]
+        S10[USB<br/>8006<br/>Data Sync]
+    end
+
+    subgraph "Data Layer"
+        DB1[(SQLite<br/>Memories)]
+        DB2[(Vector Index<br/>HNSW)]
+        DB3[(File Storage<br/>Audio + Images)]
+    end
+
+    subgraph "AI/ML Models"
+        M1[Llama 3.1 8B<br/>Ollama<br/>Local LLM]
+        M2[MiniLM<br/>Embeddings<br/>384-dim]
+        M3[Whisper<br/>Speech-to-Text]
+        M4[Piper<br/>Text-to-Speech]
+    end
+
+    UI1 --> GW
+    UI2 --> GW
+    UI3 --> GW
+    UI4 --> GW
+
+    GW --> S1
+    GW --> S2
+    GW --> S3
+    GW --> S4
+    GW --> S5
+
+    S1 --> S6
+    S1 --> S7
+    S1 --> S8
+    S1 --> S9
+    S1 --> S10
+
+    S1 --> DB1
+    S1 --> DB2
+    S2 --> DB1
+    S3 --> DB1
+    S4 --> DB1
+    S5 --> DB3
+
+    S1 --> M1
+    S1 --> M2
+    S5 --> M3
+    S5 --> M4
+
+    style UI1 fill:#2196F3,stroke:#1976D2,color:#fff
+    style UI2 fill:#2196F3,stroke:#1976D2,color:#fff
+    style UI3 fill:#2196F3,stroke:#1976D2,color:#fff
+    style UI4 fill:#2196F3,stroke:#1976D2,color:#fff
+    style GW fill:#4CAF50,stroke:#2E7D32,color:#fff
+    style S1 fill:#FF9800,stroke:#F57C00,color:#fff
+    style S2 fill:#9C27B0,stroke:#7B1FA2,color:#fff
+    style S3 fill:#9C27B0,stroke:#7B1FA2,color:#fff
+    style S4 fill:#9C27B0,stroke:#7B1FA2,color:#fff
+    style S5 fill:#9C27B0,stroke:#7B1FA2,color:#fff
+    style S6 fill:#607D8B,stroke:#455A64,color:#fff
+    style S7 fill:#607D8B,stroke:#455A64,color:#fff
+    style S8 fill:#607D8B,stroke:#455A64,color:#fff
+    style S9 fill:#607D8B,stroke:#455A64,color:#fff
+    style S10 fill:#607D8B,stroke:#455A64,color:#fff
+    style DB1 fill:#F44336,stroke:#C62828,color:#fff
+    style DB2 fill:#F44336,stroke:#C62828,color:#fff
+    style DB3 fill:#F44336,stroke:#C62828,color:#fff
+    style M1 fill:#00BCD4,stroke:#0097A7,color:#fff
+    style M2 fill:#00BCD4,stroke:#0097A7,color:#fff
+    style M3 fill:#00BCD4,stroke:#0097A7,color:#fff
+    style M4 fill:#00BCD4,stroke:#0097A7,color:#fff

@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kilo Dashboard (HTMX Prototype)</title>
+  <script src="https://unpkg.com/htmx.org@1.10.1"></script>
+  <script src="https://unpkg.com/alpinejs@3.10.5" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 text-gray-900">
+  <div class="max-w-6xl mx-auto p-6">
+    <h1 class="text-3xl font-bold mb-4">Kilo Dashboard (HTMX Prototype)</h1>
+
+    <div class="grid grid-cols-3 gap-4 mb-6">
+      <div class="bg-white shadow p-4 rounded" hx-get="/ai_brain/stats/dashboard" hx-trigger="load" hx-swap="outerHTML">
+        <h2 class="text-lg font-semibold">Loading stats...</h2>
+      </div>
+      <div class="bg-white shadow p-4 rounded" id="memory-viz">
+        <h2 class="text-lg font-semibold mb-2">Memory Visualization</h2>
+        <button class="px-3 py-1 bg-blue-600 text-white rounded" hx-get="/ai_brain/memory/visualization" hx-trigger="click" hx-target="#viz-canvas" hx-swap="innerHTML">Load</button>
+        <div id="viz-canvas" class="mt-3">(Click Load)</div>
+      </div>
+      <div class="bg-white shadow p-4 rounded">
+        <h2 class="text-lg font-semibold">Quick Actions</h2>
+        <div class="mt-3">
+          <button class="px-3 py-1 bg-green-600 text-white rounded" hx-post="/ai_brain/chat/quick" hx-vals='{"message":"Hello from HTMX"}' hx-swap="outerHTML">Say Hello</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white shadow p-4 rounded">
+      <h2 class="text-lg font-semibold mb-2">Recent Logs</h2>
+      <div hx-get="/admin/ai_brain/metrics" hx-headers='{"X-Admin-Token":"kilo-secure-admin-2024"}' hx-trigger="load" hx-swap="innerHTML" class="font-mono text-sm text-gray-700 overflow-auto max-h-48">(metrics will appear here if token valid)</div>
+    </div>
+  </div>
+
+  <template id="stats-tpl">
+    <div class="bg-white shadow p-4 rounded">
+      <h2 class="text-lg font-semibold">Dashboard Stats</h2>
+      <div class="mt-2 grid grid-cols-4 gap-4">
+        <div class="p-3 bg-gray-50 rounded">Memories: <span class="font-bold">{{totalMemories}}</span></div>
+        <div class="p-3 bg-gray-50 rounded">Active Habits: <span class="font-bold">{{activeHabits}}</span></div>
+        <div class="p-3 bg-gray-50 rounded">Upcoming Reminders: <span class="font-bold">{{upcomingReminders}}</span></div>
+        <div class="p-3 bg-gray-50 rounded">Monthly Spend: <span class="font-bold">${{monthlySpending}}</span></div>
+      </div>
+    </div>
+  </template>
+
+  <script>
+    // small helper to convert JSON to the small template above (used by hx-swap="outerHTML")
+    document.body.addEventListener('htmx:afterSwap', (e) => {
+      // If the swapped content is JSON, we can render the card
+    });
+
+    // Customize htmx behavior for /ai_brain/stats/dashboard: intercept JSON response and render HTML
+    htmx.defineExtension('json-to-html', {
+      onEvent: function (name, evt) {
+        if (name !== 'htmx:afterOnLoad') return;
+        const xhr = evt.detail.xhr;
+        const target = evt.detail.target;
+        if (!xhr) return;
+        try {
+          const ct = xhr.getResponseHeader('content-type') || '';
+          if (ct.includes('application/json')) {
+            const data = JSON.parse(xhr.responseText);
+            // build card
+            target.outerHTML = `
+              <div class="bg-white shadow p-4 rounded">
+                <h2 class="text-lg font-semibold">Dashboard Stats</h2>
+                <div class="mt-2 grid grid-cols-4 gap-4">
+                  <div class="p-3 bg-gray-50 rounded">Memories: <span class="font-bold">${data.totalMemories}</span></div>
+                  <div class="p-3 bg-gray-50 rounded">Active Habits: <span class="font-bold">${data.activeHabits}</span></div>
+                  <div class="p-3 bg-gray-50 rounded">Upcoming Reminders: <span class="font-bold">${data.upcomingReminders}</span></div>
+                  <div class="p-3 bg-gray-50 rounded">Monthly Spend: <span class="font-bold">$${data.monthlySpending}</span></div>
+                </div>
+              </div>`;
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    });
+
+    // Use the extension on the stats block
+    document.querySelectorAll('[hx-get="/ai_brain/stats/dashboard"]').forEach((el) => {
+      el.setAttribute('hx-ext', 'json-to-html');
+    });
+
+    // Hook for memory viz: render a simple chart
+    document.body.addEventListener('htmx:afterSwap', (e) => {
+      if (e.detail.target.id === 'viz-canvas') {
+        try {
+          const data = JSON.parse(e.detail.xhr.responseText);
+          const ctx = document.createElement('canvas');
+          ctx.width = 600; ctx.height = 240;
+          e.detail.target.innerHTML = '';
+          e.detail.target.appendChild(ctx);
+          const labels = data.timeline.map(t => t.date);
+          const counts = data.timeline.map(t => t.count);
+          new Chart(ctx, {type: 'line', data: {labels: labels, datasets: [{label: 'Memories', data: counts, fill: true, backgroundColor: 'rgba(59,130,246,0.2)', borderColor: '#3b82f6'}]}});
+        } catch (err) { console.error(err); }
+      }
+    });
+  </script>
+</body>
+</html>

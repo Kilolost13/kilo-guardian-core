@@ -1,0 +1,8 @@
+fastapi==0.104.1
+uvicorn==0.24.0
+python-multipart==0.0.6
+
+# Future STT/TTS dependencies (commented out until needed):
+# faster-whisper==0.10.0  # For speech-to-text
+# piper-tts==1.2.0        # For text-to-speech (if available)
+# webrtcvad==2.0.10       # For voice activity detection

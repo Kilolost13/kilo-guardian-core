@@ -1,0 +1,94 @@
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#4CAF50'}}}%%
+
+graph TB
+    subgraph "Frontend Layer"
+        F1[React 18.3 + TypeScript]
+        F2[TailwindCSS + Framer Motion]
+        F3[Recharts + Axios]
+        F4[Nginx Web Server]
+    end
+
+    subgraph "API Layer"
+        A1[FastAPI]
+        A2[Uvicorn ASGI Server]
+        A3[Docker Networking]
+    end
+
+    subgraph "Backend Services - Python 3.11"
+        B1[SQLAlchemy ORM]
+        B2[Cryptography Fernet]
+        B3[APScheduler]
+        B4[httpx Client]
+    end
+
+    subgraph "AI/ML Stack"
+        M1[Ollama - Llama 3.1 8B]
+        M2[sentence-transformers]
+        M3[Whisper.cpp STT]
+        M4[Piper TTS]
+        M5[scikit-learn]
+        M6[NetworkX]
+    end
+
+    subgraph "Computer Vision"
+        CV1[OpenCV]
+        CV2[Tesseract OCR]
+        CV3[Pillow PIL]
+    end
+
+    subgraph "Data Layer"
+        D1[SQLite + WAL]
+        D2[JSON Files]
+        D3[Binary Blobs]
+    end
+
+    subgraph "Infrastructure"
+        I1[Docker + Docker Compose]
+        I2[Ubuntu 22.04 LTS]
+        I3[AMD Radeon 780M GPU]
+    end
+
+    F1 --> F4
+    F2 --> F4
+    F3 --> F4
+    F4 --> A1
+
+    A1 --> A2
+    A2 --> A3
+    A3 --> B1
+
+    B1 --> M1
+    B1 --> M2
+    B1 --> M5
+    B1 --> M6
+
+    B1 --> CV1
+    CV1 --> CV2
+
+    B1 --> D1
+    B1 --> D2
+    B1 --> D3
+
+    A2 --> I1
+    I1 --> I2
+    I2 --> I3
+
+    style F1 fill:#61DAFB,stroke:#21A1C4,color:#000
+    style F2 fill:#61DAFB,stroke:#21A1C4,color:#000
+    style F3 fill:#61DAFB,stroke:#21A1C4,color:#000
+    style F4 fill:#009639,stroke:#006B2B,color:#fff
+    style A1 fill:#009688,stroke:#00695C,color:#fff
+    style A2 fill:#009688,stroke:#00695C,color:#fff
+    style A3 fill:#2496ED,stroke:#1976D2,color:#fff
+    style B1 fill:#3776AB,stroke:#1565C0,color:#fff
+    style M1 fill:#FF6F00,stroke:#E65100,color:#fff
+    style M2 fill:#FF6F00,stroke:#E65100,color:#fff
+    style M3 fill:#FF6F00,stroke:#E65100,color:#fff
+    style M4 fill:#FF6F00,stroke:#E65100,color:#fff
+    style M5 fill:#FF6F00,stroke:#E65100,color:#fff
+    style M6 fill:#FF6F00,stroke:#E65100,color:#fff
+    style CV1 fill:#5C3EE8,stroke:#3F21C7,color:#fff
+    style CV2 fill:#5C3EE8,stroke:#3F21C7,color:#fff
+    style D1 fill:#003B57,stroke:#002838,color:#fff
+    style I1 fill:#2496ED,stroke:#1976D2,color:#fff
+    style I2 fill:#E95420,stroke:#DD4814,color:#fff

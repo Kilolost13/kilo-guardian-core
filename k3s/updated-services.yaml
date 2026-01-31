@@ -1,0 +1,145 @@
+---
+# Updated Meds Service with /take endpoint
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kilo-meds-v2
+  namespace: kilo-guardian
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kilo-meds
+  template:
+    metadata:
+      labels:
+        app: kilo-meds
+    spec:
+      containers:
+      - name: meds
+        image: python:3.11-slim
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            echo "Installing dependencies..."
+            apt-get update -qq && apt-get install -y -qq tesseract-ocr libtesseract-dev libgl1 libglib2.0-0 > /dev/null 2>&1
+            pip install --no-cache-dir --quiet \
+              fastapi==0.104.1 \
+              uvicorn[standard]==0.24.0 \
+              Pillow==10.1.0 \
+              pytesseract==0.3.10 \
+              sqlmodel==0.0.14 \
+              httpx==0.25.2 \
+              numpy==1.26.2 \
+              opencv-python-headless==4.8.1.78 \
+              python-multipart==0.0.6
+
+            echo "10.43.63.197 ai_brain" >> /etc/hosts
+            echo "10.43.173.215 library_of_truth" >> /etc/hosts
+
+            echo "Starting meds service with /take endpoint..."
+            cd /app && python -m uvicorn main:app --host 0.0.0.0 --port 9001
+        ports:
+        - containerPort: 9001
+        env:
+        - name: AI_BRAIN_URL
+          value: "http://kilo-ai-brain:9004/ingest/meds"
+        - name: ALLOW_NETWORK
+          value: "false"
+        volumeMounts:
+        - name: code
+          mountPath: /app
+        - name: data
+          mountPath: /data
+        readinessProbe:
+          httpGet:
+            path: /status
+            port: 9001
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /status
+            port: 9001
+          initialDelaySeconds: 80
+          periodSeconds: 20
+      volumes:
+      - name: code
+        configMap:
+          name: meds-code-updated
+      - name: data
+        emptyDir: {}
+
+---
+# Updated Financial Service with fixed Budget/Goal validation
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kilo-financial-v2
+  namespace: kilo-guardian
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kilo-financial
+  template:
+    metadata:
+      labels:
+        app: kilo-financial
+    spec:
+      containers:
+      - name: financial
+        image: python:3.11-slim
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            echo "Installing dependencies..."
+            apt-get update -qq && apt-get install -y -qq tesseract-ocr libtesseract-dev > /dev/null 2>&1
+            pip install --no-cache-dir --quiet \
+              fastapi==0.104.1 \
+              uvicorn[standard]==0.24.0 \
+              sqlmodel==0.0.14 \
+              httpx==0.25.2 \
+              Pillow==10.1.0 \
+              pytesseract==0.3.10 \
+              sqlalchemy==2.0.23
+
+            echo "Setting up file structure..."
+            mkdir -p /app/models
+            cp /app/models__init__.py /app/models/__init__.py 2>/dev/null || true
+
+            echo "10.43.63.197 ai_brain" >> /etc/hosts
+            echo "10.43.173.215 library_of_truth" >> /etc/hosts
+
+            echo "Starting financial service with fixed validation..."
+            cd /app && python -m uvicorn main:app --host 0.0.0.0 --port 9005
+        ports:
+        - containerPort: 9005
+        env:
+        - name: AI_BRAIN_URL
+          value: "http://kilo-ai-brain:9004"
+        - name: ALLOW_NETWORK
+          value: "false"
+        volumeMounts:
+        - name: code
+          mountPath: /app
+        - name: data
+          mountPath: /data
+        readinessProbe:
+          httpGet:
+            path: /status
+            port: 9005
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /status
+            port: 9005
+          initialDelaySeconds: 80
+          periodSeconds: 20
+      volumes:
+      - name: code
+        configMap:
+          name: financial-code-updated
+      - name: data
+        emptyDir: {}

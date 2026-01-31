@@ -1,0 +1,71 @@
+flowchart LR
+  subgraph Client
+    U[User / Browser]
+    FE[kilo-react-frontend]
+  end
+
+  subgraph Edge
+    GW[Gateway / API]
+  end
+
+  subgraph Services
+    REM[Reminder Service - Uvicorn FastAPI]
+    FIN[Financial Service - Uvicorn FastAPI]
+    AI[AI Brain Service - Uvicorn FastAPI]
+  end
+
+  subgraph Datastores
+    DBrem[(Reminder DB)]
+    DBfin[(Financial DB)]
+  end
+
+  subgraph Processing
+    Scheduler[APScheduler]
+    OCR[pytesseract + tesseract]
+    Parser[Receipt parsing & categorization]
+  end
+
+  subgraph IntegrationRunner
+    TestRunner[Test Runner - microservice/integration/test_runner.py]
+    Mock[Mock HTTP Sink (9000)]
+  end
+
+  subgraph CI_and_Images
+    BaseImg[integration-base GHCR Dockerfile.base]
+    IntImg[ms-integration Dockerfile]
+    CI[GitHub Actions buildx cache push]
+  end
+
+  %% Client interactions
+  U --> FE --> GW
+
+  %% Main service routing
+  GW --> REM
+  GW --> FIN
+  GW --> AI
+
+  %% Reminder flow
+  REM --> DBrem
+  REM --> Scheduler
+  Scheduler -->|trigger| REM
+  REM -->|signed callback HMAC + retries| External[User callback URL or Mock sink]
+
+  %% Financial flow
+  FIN --> Upload[Receipt upload API]
+  Upload --> OCR
+  OCR --> Parser
+  Parser --> DBfin
+  Parser -->|POST /ingest/finance| AI
+
+  %% Integration test flow
+  TestRunner --> Mock
+  TestRunner --> REM
+  TestRunner --> FIN
+  REM -->|callback observed| Mock
+  FIN -->|outgoing POST observed| Mock
+
+  %% CI / Docker flow
+  CI --> BaseImg
+  CI --> IntImg
+  BaseImg --> IntImg
+  IntImg -->|runs tests in-image| TestRunner

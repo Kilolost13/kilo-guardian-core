@@ -1,0 +1,179 @@
+# K8s Deployments + Services for core kilo-guardian microservices
+# NOTE: These are minimal manifests to get started. Adjust resources, probes, env and volumes per service.
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kilo-gateway
+  namespace: kilo-guardian
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: kilo-gateway
+  template:
+    metadata:
+      labels:
+        app: kilo-gateway
+    spec:
+      containers:
+      - name: gateway
+        image: kilo/gateway:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8000
+        envFrom:
+        - secretRef: {name: library-admin}
+        - configMapRef: {name: kilo-config}
+        readinessProbe:
+          httpGet: {path: /health, port: 8000}
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        livenessProbe:
+          httpGet: {path: /health, port: 8000}
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        resources:
+          requests: {cpu: "100m", memory: "128Mi"}
+          limits: {cpu: "500m", memory: "512Mi"}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kilo-gateway
+  namespace: kilo-guardian
+spec:
+  type: ClusterIP
+  selector:
+    app: kilo-gateway
+  ports:
+  - name: http
+    port: 8000
+    targetPort: 8000
+
+---
+# AI Brain
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kilo-ai-brain
+  namespace: kilo-guardian
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kilo-ai-brain
+  template:
+    metadata:
+      labels:
+        app: kilo-ai-brain
+    spec:
+      containers:
+      - name: ai-brain
+        image: kilo/ai_brain:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9004
+        envFrom:
+        - secretRef: {name: library-admin}
+        - configMapRef: {name: kilo-config}
+        readinessProbe:
+          httpGet: {path: /health, port: 9004}
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet: {path: /health, port: 9004}
+          initialDelaySeconds: 20
+          periodSeconds: 30
+        resources:
+          requests: {cpu: "250m", memory: "512Mi"}
+          limits: {cpu: "1", memory: "2Gi"}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kilo-ai-brain
+  namespace: kilo-guardian
+spec:
+  type: ClusterIP
+  selector:
+    app: kilo-ai-brain
+  ports:
+  - name: http
+    port: 9004
+    targetPort: 9004
+
+---
+# Frontend (nginx)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kilo-frontend
+  namespace: kilo-guardian
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kilo-frontend
+  template:
+    metadata:
+      labels:
+        app: kilo-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: kilo/frontend:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 80
+        readinessProbe:
+          httpGet: {path: /, port: 80}
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests: {cpu: "50m", memory: "64Mi"}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kilo-frontend
+  namespace: kilo-guardian
+spec:
+  type: ClusterIP
+  selector:
+    app: kilo-frontend
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+
+---
+# Ollama (model runner) - best-as-service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kilo-ollama
+  namespace: kilo-guardian
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kilo-ollama
+  template:
+    metadata:
+      labels:
+        app: kilo-ollama
+    spec:
+      containers:
+      - name: ollama
+        image: ollama/ollama:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 11434
+        resources:
+          requests: {cpu: "500m", memory: "1Gi"}
+
+---
+# NOTE: Add similar yaml blocks for other services (meds, reminder, habits, financial, ml_engine, usb_transfer, library_of_truth, cam, voice)
+# For brevity, repeat patterns above and change names/ports/images per service. Use 'kilo_<service>:latest' images.

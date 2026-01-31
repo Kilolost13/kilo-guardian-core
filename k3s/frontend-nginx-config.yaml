@@ -1,0 +1,147 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-nginx-config
+  namespace: kilo-guardian
+data:
+  default.conf: |
+    # WebSocket upgrade map
+    map $http_upgrade $connection_upgrade {
+        default upgrade;
+        '' close;
+    }
+
+    server {
+        listen 80;
+        listen [::]:80;
+        server_name localhost;
+
+        root /usr/share/nginx/html;
+        index index.html;
+
+        # Allow large file uploads (for prescription images)
+        client_max_body_size 20M;
+
+        # Enable gzip compression
+        gzip on;
+        gzip_vary on;
+        gzip_min_length 1024;
+        gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+
+        # Serve static files
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+
+        # Proxy Socket.IO requests to dedicated Socket.IO service
+        location /api/socket.io/ {
+            proxy_pass http://kilo-socketio:9010/socket.io/;
+            proxy_http_version 1.1;
+
+            # WebSocket support
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection $connection_upgrade;
+
+            proxy_set_header Host $host;
+            proxy_cache_bypass $http_upgrade;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+
+            # WebSocket timeouts (24 hours)
+            proxy_read_timeout 86400;
+            proxy_send_timeout 86400;
+        }
+
+        # Proxy all other API requests to gateway
+        location /api/ {
+            proxy_pass http://kilo-gateway:8000/;
+            proxy_http_version 1.1;
+
+            # WebSocket support (for future gateway WS)
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection $connection_upgrade;
+
+            proxy_set_header Host $host;
+            proxy_cache_bypass $http_upgrade;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+
+            # Increased timeouts for long-running requests
+            proxy_read_timeout 300;
+            proxy_send_timeout 300;
+        }
+
+        # Disable caching for JS/CSS to ensure updates are loaded immediately
+        location ~* \.(js|css)$ {
+            expires off;
+            add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0";
+        }
+
+        # Cache images and fonts longer (they change less frequently)
+        location ~* \.(png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+            expires 7d;
+            add_header Cache-Control "public";
+        }
+
+        # Security headers
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-XSS-Protection "1; mode=block" always;
+    }
+
+    # HTTPS server (optional, requires SSL certificates)
+    server {
+        listen 443 ssl;
+        listen [::]:443 ssl;
+        server_name localhost;
+
+        # SSL certificate paths (self-signed for air-gapped deployment)
+        ssl_certificate /etc/ssl/certs/nginx-selfsigned.crt;
+        ssl_certificate_key /etc/ssl/private/nginx-selfsigned.key;
+
+        # SSL configuration
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_ciphers HIGH:!aNULL:!MD5;
+        ssl_prefer_server_ciphers on;
+
+        root /usr/share/nginx/html;
+        index index.html;
+
+        # Allow large file uploads (for prescription images)
+        client_max_body_size 20M;
+
+        # Same configuration as HTTP
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+
+        location /api/ {
+            proxy_pass http://kilo-gateway:8000/;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection 'upgrade';
+            proxy_set_header Host $host;
+            proxy_cache_bypass $http_upgrade;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        # Disable caching for JS/CSS to ensure updates are loaded immediately
+        location ~* \.(js|css)$ {
+            expires off;
+            add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0";
+        }
+
+        # Cache images and fonts longer (they change less frequently)
+        location ~* \.(png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+            expires 7d;
+            add_header Cache-Control "public";
+        }
+
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-XSS-Protection "1; mode=block" always;
+    }

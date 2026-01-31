@@ -1,0 +1,8 @@
+# Kilo AI ML Engine Cron Jobs
+# Runs nightly training at 3:00 AM local time
+
+# Train all habit models every night at 3:00 AM
+0 3 * * * cd /app && /usr/local/bin/python /app/train_models.py >> /data/ml_models/training.log 2>&1
+
+# Clean up old logs once a week (Sunday at 4:00 AM)
+0 4 * * 0 find /data/ml_models -name "*.log" -mtime +30 -delete

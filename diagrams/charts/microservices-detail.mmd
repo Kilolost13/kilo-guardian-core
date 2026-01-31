@@ -1,0 +1,55 @@
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#4CAF50'}}}%%
+
+graph TD
+    GW[API Gateway :8000<br/>FastAPI]
+
+    subgraph "Intelligence Services"
+        AI[AI Brain :9004<br/>RAG + LLM + Memory<br/>SQLite + Ollama]
+        ML[ML Engine :9008<br/>Predictions<br/>scikit-learn]
+        LIB[Library :9006<br/>Knowledge Store<br/>Encrypted SQLite]
+    end
+
+    subgraph "Health Services"
+        MED[Medications :9001<br/>Tracking + OCR<br/>Tesseract]
+        HAB[Habits :9003<br/>Activity Tracking<br/>Pattern Analysis]
+        REM[Reminders :9002<br/>Scheduling<br/>APScheduler]
+    end
+
+    subgraph "Interface Services"
+        VOI[Voice :9009<br/>STT + TTS<br/>Whisper + Piper]
+        CAM[Camera :9007<br/>Activity Detection<br/>OpenCV]
+        USB[USB Transfer :8006<br/>Import/Export<br/>Encrypted]
+    end
+
+    subgraph "Finance"
+        FIN[Financial :9005<br/>Budget + Expenses<br/>Receipt OCR]
+    end
+
+    GW --> AI
+    GW --> MED
+    GW --> HAB
+    GW --> FIN
+    GW --> VOI
+
+    AI --> ML
+    AI --> LIB
+    AI --> MED
+    AI --> HAB
+    AI --> REM
+    AI --> CAM
+    AI --> USB
+
+    MED --> REM
+    HAB --> ML
+
+    style GW fill:#4CAF50,stroke:#2E7D32,color:#fff
+    style AI fill:#FF9800,stroke:#F57C00,color:#fff
+    style ML fill:#00BCD4,stroke:#0097A7,color:#fff
+    style LIB fill:#00BCD4,stroke:#0097A7,color:#fff
+    style MED fill:#9C27B0,stroke:#7B1FA2,color:#fff
+    style HAB fill:#9C27B0,stroke:#7B1FA2,color:#fff
+    style REM fill:#9C27B0,stroke:#7B1FA2,color:#fff
+    style VOI fill:#2196F3,stroke:#1976D2,color:#fff
+    style CAM fill:#2196F3,stroke:#1976D2,color:#fff
+    style USB fill:#2196F3,stroke:#1976D2,color:#fff
+    style FIN fill:#F44336,stroke:#C62828,color:#fff

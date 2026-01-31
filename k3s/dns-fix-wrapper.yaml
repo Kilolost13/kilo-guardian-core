@@ -1,0 +1,16 @@
+---
+# ConfigMap with wrapper script to fix DNS resolution for underscore service names
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dns-fix-wrapper
+  namespace: kilo-guardian
+data:
+  wrapper.sh: |
+    #!/bin/sh
+    # Add DNS entries for Docker Compose service names
+    echo "10.43.63.197 ai_brain" >> /etc/hosts
+    echo "10.43.173.215 library_of_truth" >> /etc/hosts
+
+    # Execute the original entrypoint
+    exec "$@"

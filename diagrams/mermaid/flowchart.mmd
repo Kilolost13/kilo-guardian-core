@@ -1,0 +1,32 @@
+flowchart LR
+  U[User]
+  F[Frontend]
+  G[Gateway]
+  H[Habits]
+  M[Meds]
+  Fi[Finance]
+  R[Reminder]
+  V[Voice]
+  Cam[Cam]
+  AI[AIBrain]
+  ML[MLEngine]
+
+  U --> F
+  F --> G
+  G --> H
+  G --> M
+  G --> Fi
+  G --> R
+  G --> V
+  G --> Cam
+
+  H --> AI
+  M --> AI
+  Fi --> AI
+  R --> AI
+  V --> AI
+  Cam --> AI
+
+  AI --> ML
+  ML --> F
+  F --> U

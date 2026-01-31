@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kilo-usb-transfer"
+version = "1.0.0"
+description = "Secure USB data transfer module for KILO AI Memory Assistant"
+authors = [
+    {name = "KILO Development Team"}
+]
+dependencies = [
+    "fastapi==0.104.1",
+    "uvicorn[standard]==0.24.0",
+    "pydantic==2.5.0",
+    "cryptography==41.0.7",
+    "python-multipart==0.0.6"
+]
+requires-python = ">=3.8"
+
+[project.scripts]
+kilo-usb = "usb_transfer.main:app"
+
+[tool.setuptools]
+packages = ["usb_transfer"]
+
+[tool.setuptools.package-data]
+usb_transfer = ["*.txt", "*.md"]

@@ -1,0 +1,362 @@
+import React, { useState } from 'react';
+import { MultiCameraCapture } from '../components/shared/MultiCameraCapture';
+import { Button } from '../components/shared/Button';
+import { Card } from '../components/shared/Card';
+import {
+  processBatchOCR,
+  analyzePrescriptionMultiAngle,
+  analyzeReceiptMultiAngle,
+  CapturedImage,
+  BatchOCRResponse,
+} from '../services/multiCameraService';
+import { FaPills, FaCamera, FaReceipt } from 'react-icons/fa';
+import { FaSpinner } from 'react-icons/fa';
+
+type CaptureMode = 'prescription' | 'receipt' | 'general';
+
+const MultiCameraDemo: React.FC = () => {
+  const [showCamera, setShowCamera] = useState(false);
+  const [captureMode, setCaptureMode] = useState<CaptureMode>('general');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [ocrResults, setOcrResults] = useState<BatchOCRResponse | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleCapture = async (images: CapturedImage[]) => {
+    setIsProcessing(true);
+    setError(null);
+    setOcrResults(null);
+    setAnalysisResult(null);
+
+    try {
+      console.log(`Processing ${images.length} images in ${captureMode} mode`);
+
+      // Process based on mode
+      switch (captureMode) {
+        case 'prescription':
+          const prescriptionResult = await analyzePrescriptionMultiAngle(images);
+          setAnalysisResult(prescriptionResult);
+          setOcrResults(prescriptionResult.ocr_results);
+          break;
+
+        case 'receipt':
+          const receiptResult = await analyzeReceiptMultiAngle(images);
+          setAnalysisResult(receiptResult);
+          setOcrResults(receiptResult.ocr_results);
+          break;
+
+        case 'general':
+        default:
+          const batchResult = await processBatchOCR(images);
+          setOcrResults(batchResult);
+          break;
+      }
+
+      setShowCamera(false);
+    } catch (err: any) {
+      console.error('Processing failed:', err);
+      setError(err.message || 'Failed to process images');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const startCapture = (mode: CaptureMode) => {
+    setCaptureMode(mode);
+    setShowCamera(true);
+    setOcrResults(null);
+    setAnalysisResult(null);
+    setError(null);
+  };
+
+  return (
+    <div className="min-h-screen zombie-gradient p-6">
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-4xl font-bold text-zombie-green terminal-glow mb-2">
+          Multi-Camera Capture Demo
+        </h1>
+        <p className="text-gray-300">
+          Capture from multiple cameras simultaneously for better OCR accuracy
+        </p>
+      </div>
+
+      {/* Capture Mode Buttons */}
+      {!showCamera && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <Card className="bg-dark-card border-2 border-purple-600/30">
+            <div className="p-6">
+              <FaPills className="text-4xl text-purple-400 mb-3" />
+              <h3 className="text-xl font-bold text-white mb-2">
+                Prescription Scanning
+              </h3>
+              <p className="text-gray-400 mb-4 text-sm">
+                Capture medication bottles from multiple angles for accurate OCR
+              </p>
+              <Button
+                variant="primary"
+                onClick={() => startCapture('prescription')}
+                className="w-full"
+              >
+                <FaCamera /> Start Prescription Scan
+              </Button>
+            </div>
+          </Card>
+
+          <Card className="bg-dark-card border-2 border-blue-600/30">
+            <div className="p-6">
+              <FaReceipt className="text-4xl text-blue-400 mb-3" />
+              <h3 className="text-xl font-bold text-white mb-2">
+                Receipt/Budget Scanning
+              </h3>
+              <p className="text-gray-400 mb-4 text-sm">
+                Capture receipts or budget sheets from multiple angles
+              </p>
+              <Button
+                variant="primary"
+                onClick={() => startCapture('receipt')}
+                className="w-full"
+              >
+                <FaReceipt /> Start Receipt Scan
+              </Button>
+            </div>
+          </Card>
+
+          <Card className="bg-dark-card border-2 border-zombie-green/30">
+            <div className="p-6">
+              <FaCamera className="text-4xl text-zombie-green mb-3" />
+              <h3 className="text-xl font-bold text-white mb-2">
+                General OCR
+              </h3>
+              <p className="text-gray-400 mb-4 text-sm">
+                Capture any text from multiple cameras for best results
+              </p>
+              <Button
+                variant="primary"
+                onClick={() => startCapture('general')}
+                className="w-full"
+              >
+                <FaCamera /> Start General Scan
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Processing Indicator */}
+      {isProcessing && (
+        <Card className="bg-blue-900/20 border-2 border-blue-600 mb-6">
+          <div className="p-6 flex items-center gap-4">
+            <FaSpinner className="text-3xl text-blue-400 animate-spin" />
+            <div>
+              <h3 className="text-xl font-bold text-blue-300">
+                Processing Images...
+              </h3>
+              <p className="text-blue-200">
+                Running OCR on all captured images
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Error Display */}
+      {error && (
+        <Card className="bg-red-900/20 border-2 border-red-600 mb-6">
+          <div className="p-6">
+            <h3 className="text-xl font-bold text-red-400 mb-2">Error</h3>
+            <p className="text-red-300">{error}</p>
+          </div>
+        </Card>
+      )}
+
+      {/* OCR Results */}
+      {ocrResults && (
+        <div className="space-y-6">
+          {/* Summary */}
+          <Card className="bg-dark-card border-2 border-zombie-green">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-5xl">✓</span>
+                <h3 className="text-2xl font-bold text-zombie-green">
+                  OCR Complete
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-dark-bg p-4 rounded-lg">
+                  <p className="text-gray-400 text-sm">Total Images</p>
+                  <p className="text-3xl font-bold text-white">
+                    {ocrResults.total_images}
+                  </p>
+                </div>
+                <div className="bg-dark-bg p-4 rounded-lg">
+                  <p className="text-gray-400 text-sm">Successful OCR</p>
+                  <p className="text-3xl font-bold text-green-400">
+                    {ocrResults.successful_ocr}
+                  </p>
+                </div>
+                <div className="bg-dark-bg p-4 rounded-lg">
+                  <p className="text-gray-400 text-sm">Failed OCR</p>
+                  <p className="text-3xl font-bold text-red-400">
+                    {ocrResults.failed_ocr}
+                  </p>
+                </div>
+                <div className="bg-dark-bg p-4 rounded-lg">
+                  <p className="text-gray-400 text-sm">Best Result</p>
+                  <p className="text-3xl font-bold text-blue-400">
+                    #{ocrResults.recommended_result_index + 1}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Combined Text */}
+          <Card className="bg-dark-card border-2 border-dark-border">
+            <div className="p-6">
+              <h3 className="text-xl font-bold text-zombie-green mb-3">
+                Combined OCR Text
+              </h3>
+              <div className="bg-dark-bg p-4 rounded-lg border border-zombie-green/30">
+                <pre className="text-white whitespace-pre-wrap font-mono text-sm">
+                  {ocrResults.combined_text || '(No text extracted)'}
+                </pre>
+              </div>
+            </div>
+          </Card>
+
+          {/* Individual Results */}
+          <Card className="bg-dark-card border-2 border-dark-border">
+            <div className="p-6">
+              <h3 className="text-xl font-bold text-zombie-green mb-3">
+                Individual Camera Results
+              </h3>
+              <div className="space-y-3">
+                {ocrResults.individual_results.map((result, index) => (
+                  <div
+                    key={index}
+                    className={`p-4 rounded-lg border-2 ${
+                      index === ocrResults.recommended_result_index
+                        ? 'bg-blue-900/20 border-blue-600'
+                        : 'bg-dark-bg border-dark-border'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-zombie-green font-bold">
+                          #{index + 1}
+                        </span>
+                        <span className="text-gray-400 text-sm">
+                          {result.filename}
+                        </span>
+                        {index === ocrResults.recommended_result_index && (
+                          <span className="bg-blue-600 text-white px-2 py-1 rounded text-xs">
+                            BEST
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex gap-4 text-sm">
+                        {result.confidence !== undefined && (
+                          <span className="text-gray-400">
+                            Confidence:{' '}
+                            <span className="text-white font-bold">
+                              {result.confidence.toFixed(1)}%
+                            </span>
+                          </span>
+                        )}
+                        <span className="text-gray-400">
+                          Chars:{' '}
+                          <span className="text-white font-bold">
+                            {result.char_count}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {result.success ? (
+                      <div className="bg-dark-bg p-3 rounded border border-zombie-green/20">
+                        <pre className="text-gray-300 whitespace-pre-wrap font-mono text-xs">
+                          {result.text || '(Empty)'}
+                        </pre>
+                      </div>
+                    ) : (
+                      <div className="bg-red-900/20 p-3 rounded border border-red-600">
+                        <p className="text-red-400 text-sm">
+                          Error: {result.error}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Card>
+
+          {/* Common Words */}
+          {ocrResults.common_words && ocrResults.common_words.length > 0 && (
+            <Card className="bg-dark-card border-2 border-dark-border">
+              <div className="p-6">
+                <h3 className="text-xl font-bold text-zombie-green mb-3">
+                  High-Confidence Words
+                </h3>
+                <p className="text-gray-400 text-sm mb-3">
+                  Words found in multiple captures (likely accurate)
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {ocrResults.common_words.map((word, index) => (
+                    <span
+                      key={index}
+                      className="bg-zombie-green/20 border border-zombie-green text-zombie-green px-3 py-1 rounded text-sm"
+                    >
+                      {word}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Analysis Results (if prescription/receipt mode) */}
+          {analysisResult && (
+            <Card className="bg-purple-900/20 border-2 border-purple-600">
+              <div className="p-6">
+                <h3 className="text-xl font-bold text-purple-300 mb-3">
+                  AI Analysis Results
+                </h3>
+                <pre className="text-purple-200 whitespace-pre-wrap font-mono text-sm bg-dark-bg p-4 rounded border border-purple-600/30">
+                  {JSON.stringify(analysisResult, null, 2)}
+                </pre>
+              </div>
+            </Card>
+          )}
+
+          {/* Reset Button */}
+          <div className="text-center">
+            <Button
+              variant="primary"
+              onClick={() => {
+                setOcrResults(null);
+                setAnalysisResult(null);
+              }}
+              size="lg"
+            >
+              Start New Capture
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Multi-Camera Capture Modal */}
+      {showCamera && (
+        <MultiCameraCapture
+          onCapture={handleCapture}
+          onClose={() => setShowCamera(false)}
+          maxCameras={4}
+        />
+      )}
+    </div>
+  );
+};
+
+export default MultiCameraDemo;

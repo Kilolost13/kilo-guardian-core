@@ -1,0 +1,38 @@
+FROM python:3.11-slim
+
+# Base image for integration tests: installs heavy OS packages and Python
+# runtime packages that change infrequently (Tesseract, Leptonica, Pillow, etc.)
+ARG APP_USER=app
+ARG APP_UID=1000
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONPATH=/app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        gcc \
+        libpq-dev \
+        ca-certificates \
+        curl \
+        tesseract-ocr \
+        libtesseract-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# create a non-root user
+RUN groupadd -g ${APP_UID} ${APP_USER} || true \
+    && useradd -m -u ${APP_UID} -g ${APP_UID} -s /bin/bash ${APP_USER} || true
+
+WORKDIR /app
+
+# Upgrade pip and install heavy Python runtime deps (Pillow, pytesseract).
+RUN python -m pip install --upgrade pip setuptools wheel \
+    && python -m pip install --no-cache-dir Pillow pytesseract
+
+# create runtime directories and make sure the app user owns them
+RUN mkdir -p /app/data /tmp && chown -R ${APP_USER}:${APP_USER} /app
+
+USER ${APP_USER}
+WORKDIR /app
+
+CMD ["/bin/sh"]

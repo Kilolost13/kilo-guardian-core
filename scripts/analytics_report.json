@@ -1,0 +1,101 @@
+{
+  "generated_at": "2025-12-24T08:01:56.013814",
+  "summary": {
+    "total_memories": 0,
+    "total_conversations": 0,
+    "engagement_score": 0.0,
+    "activity_level": "Getting Started",
+    "days_active": 0,
+    "insights_count": 4
+  },
+  "metrics": {
+    "total_memories": 0,
+    "total_conversations": 0,
+    "total_medications": 0,
+    "total_reminders": 0,
+    "completed_reminders": 0,
+    "memories_by_day": {},
+    "memories_by_hour": {},
+    "conversations_by_date": {},
+    "recent_activity": {
+      "memories_last_30_days": 0,
+      "conversations_last_30_days": 0,
+      "avg_memories_per_day": 0.0,
+      "avg_conversations_per_day": 0.0
+    },
+    "memory_types": {},
+    "importance_distribution": {},
+    "content_stats": {
+      "avg_length": 0,
+      "max_length": 0,
+      "min_length": 0
+    },
+    "top_keywords": {},
+    "conversation_stats": {
+      "avg_messages_per_conversation": 0,
+      "max_messages": 0,
+      "total_messages": 0
+    },
+    "growth_trends": {
+      "memories_by_month": {},
+      "conversations_by_month": {}
+    },
+    "peak_usage": {
+      "peak_hour": 0,
+      "peak_hour_count": 0,
+      "peak_day": "Monday",
+      "peak_day_count": 0
+    },
+    "content_themes": {}
+  },
+  "insights": [
+    {
+      "type": "engagement",
+      "priority": "high",
+      "title": "Low Memory Creation Rate",
+      "description": "You're creating less than 1 memory per day on average. Consider setting daily reflection reminders.",
+      "action": "Set up daily prompts to record important moments and thoughts."
+    },
+    {
+      "type": "wellness",
+      "priority": "medium",
+      "title": "Late Night Usage",
+      "description": "You tend to use the system late at night. Consider morning reflection routines.",
+      "action": "Try starting your day with a morning check-in instead of evening sessions."
+    },
+    {
+      "type": "diversity",
+      "priority": "low",
+      "title": "Limited Memory Types",
+      "description": "You're focusing on few types of memories. Try recording different aspects of your life.",
+      "action": "Experiment with logging habits, health notes, and social interactions."
+    },
+    {
+      "type": "health",
+      "priority": "medium",
+      "title": "Health Tracking Opportunity",
+      "description": "You haven't recorded any health-related memories yet.",
+      "action": "Consider tracking medications, symptoms, or wellness activities."
+    }
+  ],
+  "recommendations": [
+    {
+      "category": "getting_started",
+      "title": "Build Your Memory Foundation",
+      "description": "Start by recording 5-10 important memories to establish patterns.",
+      "priority": "high"
+    },
+    {
+      "category": "wellness",
+      "title": "Optimize Usage Timing",
+      "description": "Consider shifting some activities to daytime hours for better balance.",
+      "priority": "medium"
+    },
+    {
+      "category": "diversity",
+      "title": "Expand Memory Categories",
+      "description": "Try recording memories from different areas of your life.",
+      "priority": "medium"
+    }
+  ]
+}

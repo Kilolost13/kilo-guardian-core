@@ -1,0 +1,32 @@
+{
+  "title": "AI Brain - Latency & Requests",
+  "panels": [
+    {
+      "type": "graph",
+      "title": "Request Latency (Histogram)",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(ai_brain_request_latency_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Requests per endpoint",
+      "targets": [
+        {
+          "expr": "sum(rate(ai_brain_requests_total[5m])) by (endpoint)",
+          "legendFormat": "{{endpoint}}"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "In-Progress Requests",
+      "targets": [
+        { "expr": "ai_brain_inprogress_requests" }
+      ]
+    }
+  ]
+}

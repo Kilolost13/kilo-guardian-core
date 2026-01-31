@@ -1,0 +1,39 @@
+flowchart LR
+  subgraph Frontend
+    A[Tablet UI] -->|POST /chat or /chat/voice| G[Gateway]
+  end
+
+  subgraph Gateway
+    G -->|proxy /ai_brain/*| B[AI_BRAIN Service]
+  end
+
+  subgraph AI_BRAIN[ai_brain]
+    B1[/chat JSON/] --> B
+    B2[/chat/voice multipart/] --> B
+    B --> STT[STT (OpenAI Whispe or dummy)]
+    STT -->|text| NLU[LLM / synthesize_answer]
+    NLU --> TTS[TTS (gTTS or dummy)]
+    TTS -->|base64 or file| B
+
+    B -->|GET/POST| LIB[Library of Truth]
+    B -->|DB reads/writes| DB[(SQLite SQLModel)]
+    B -->|POST| REM[Reminder service]
+    REM -->|callback POST /reminder/callback| B
+    B -->|serve TTS file| /tts/{file} --> G --> A
+  end
+
+  subgraph Reminder[reminder service]
+    REM_DB[(reminder DB)]
+    REM --> REM_DB
+    REM -->|scheduler (APScheduler)| Scheduler
+    Scheduler -->|send| Notification[Notification channel]
+  end
+
+  subgraph FlowNotes
+    note1["Flows:\n- Voice: Tablet -> Gateway -> ai_brain(/chat/voice) -> STT -> NLU -> TTS -> return audio (inline) or file URL.\n- Habits/Med/Camera: Frontend -> Gateway -> ai_brain/orchestrator -> DB + call reminder service to schedule.\n- Reminder lifecycle: ai_brain creates reminder -> reminder service schedules -> when sent, reminder calls ai_brain /reminder/callback -> ai_brain updates session state."]
+  end
+
+  style AI_BRAIN fill:#f9f,stroke:#333,stroke-width:2px
+  style Reminder fill:#ff9,stroke:#333,stroke-width:1px
+  style Gateway fill:#9ff,stroke:#333,stroke-width:1px
+  style Frontend fill:#9f9,stroke:#333,stroke-width:1px

@@ -1,0 +1,46 @@
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#4CAF50'}}}%%
+
+flowchart TD
+    Start([📸 User scans prescription])
+
+    Upload[Upload image to Camera Service]
+    Preprocess[Image preprocessing<br/>- Grayscale<br/>- Contrast adjustment<br/>- Deskew]
+    OCR[Tesseract OCR extraction]
+    Parse[Parse medication details<br/>- Name<br/>- Dosage<br/>- Frequency<br/>- Doctor]
+
+    Decision{Confidence<br/>> 70%?}
+
+    Confirm[User confirms details]
+    Store[Store in Meds Service<br/>SQLite database]
+    Memory[Create memory in AI Brain<br/>with embedding]
+    Reminder[Set up reminder schedule]
+
+    Success([✅ Medication tracked])
+    Retry([❌ Manual entry required])
+
+    Start --> Upload
+    Upload --> Preprocess
+    Preprocess --> OCR
+    OCR --> Parse
+    Parse --> Decision
+
+    Decision -->|Yes| Confirm
+    Decision -->|No| Retry
+
+    Confirm --> Store
+    Store --> Memory
+    Memory --> Reminder
+    Reminder --> Success
+
+    style Start fill:#2196F3,stroke:#1976D2,color:#fff
+    style Upload fill:#9C27B0,stroke:#7B1FA2,color:#fff
+    style Preprocess fill:#9C27B0,stroke:#7B1FA2,color:#fff
+    style OCR fill:#FF9800,stroke:#F57C00,color:#fff
+    style Parse fill:#FF9800,stroke:#F57C00,color:#fff
+    style Decision fill:#FFC107,stroke:#F57C00,color:#000
+    style Confirm fill:#4CAF50,stroke:#2E7D32,color:#fff
+    style Store fill:#4CAF50,stroke:#2E7D32,color:#fff
+    style Memory fill:#4CAF50,stroke:#2E7D32,color:#fff
+    style Reminder fill:#4CAF50,stroke:#2E7D32,color:#fff
+    style Success fill:#4CAF50,stroke:#2E7D32,color:#fff
+    style Retry fill:#F44336,stroke:#C62828,color:#fff

@@ -1,0 +1,24 @@
+The Migration Prompt for Gemini/Claude
+"I want to migrate my project, Kilo Guardian v1.0, from Docker Compose to K3s on my Beelink SER7-9 running Pop!_OS. I am tired of fighting 502/503 routing errors and want to use Kubernetes 'Services' to make my 13 microservices talk to each other more reliably.
+
+Project Context:
+
+Deployment: Air-gapped (ALLOW_NETWORK=false).
+
+Hardware: AMD Radeon 780M / Linux 6.17.4.
+
+Required Env: LIBRARY_ADMIN_KEY must be set for all operations.
+
+Core Services (13 total): kilo_gateway, kilo_frontend, kilo_ai_brain, kilo_ollama (llama3.1:8b), kilo_ml_engine, kilo_usb_transfer, kilo_library_of_truth, kilo_meds, kilo_financial, kilo_habits, kilo_reminder, kilo_voice, and kilo_cam.
+
+What I need from you:
+
+A step-by-step CLI guide to install K3s on Pop!_OS specifically for a local home-lab (no cloud stuff).
+
+The YAML manifests to create a 'Namespace' called kilo-guardian.
+
+An example of a Deployment and a Service for the kilo_gateway and kilo_frontend, including how to set up internal routing so I stop getting 502 errors.
+
+How to handle my Environment Variables using a Kubernetes 'Secret' or 'ConfigMap' for the LIBRARY_ADMIN_KEY.
+
+Keep the commands simple and explain them like I am an engineer who values precision over 'fluff'."

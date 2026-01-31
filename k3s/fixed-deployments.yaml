@@ -1,0 +1,167 @@
+---
+# Fixed deployments with simplified health checks
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kilo-gateway
+  namespace: kilo-guardian
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kilo-gateway
+  template:
+    metadata:
+      labels:
+        app: kilo-gateway
+    spec:
+      containers:
+      - name: gateway
+        image: kilo/gateway:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8000
+        env:
+        - name: MEDS_URL
+          value: "http://kilo-meds:9001"
+        - name: REMINDER_URL
+          value: "http://kilo-reminder:9002"
+        - name: HABITS_URL
+          value: "http://kilo-habits:9003"
+        - name: AI_BRAIN_URL
+          value: "http://kilo-ai-brain:9004"
+        - name: FINANCIAL_URL
+          value: "http://kilo-financial:9005"
+        - name: LIBRARY_OF_TRUTH_URL
+          value: "http://kilo-library:9006"
+        - name: CAM_URL
+          value: "http://kilo-cam:9007"
+        - name: ML_ENGINE_URL
+          value: "http://kilo-ml-engine:9008"
+        - name: VOICE_URL
+          value: "http://kilo-voice:9009"
+        - name: USB_TRANSFER_URL
+          value: "http://kilo-usb-transfer:8006"
+        - name: LIBRARY_ADMIN_KEY
+          value: "kilo-secure-admin-2024"
+        readinessProbe:
+          tcpSocket:
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        livenessProbe:
+          tcpSocket:
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kilo-meds
+  namespace: kilo-guardian
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kilo-meds
+  template:
+    metadata:
+      labels:
+        app: kilo-meds
+    spec:
+      containers:
+      - name: meds
+        image: kilo/meds:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9001
+        env:
+        - name: AI_BRAIN_URL
+          value: "http://kilo-ai-brain:9004"
+        - name: ALLOW_NETWORK
+          value: "false"
+        readinessProbe:
+          tcpSocket:
+            port: 9001
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        livenessProbe:
+          tcpSocket:
+            port: 9001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kilo-habits
+  namespace: kilo-guardian
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kilo-habits
+  template:
+    metadata:
+      labels:
+        app: kilo-habits
+    spec:
+      containers:
+      - name: habits
+        image: kilo/habits:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9003
+        env:
+        - name: AI_BRAIN_URL
+          value: "http://kilo-ai-brain:9004"
+        - name: ALLOW_NETWORK
+          value: "false"
+        readinessProbe:
+          tcpSocket:
+            port: 9003
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        livenessProbe:
+          tcpSocket:
+            port: 9003
+          initialDelaySeconds: 30
+          periodSeconds: 10
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kilo-financial
+  namespace: kilo-guardian
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kilo-financial
+  template:
+    metadata:
+      labels:
+        app: kilo-financial
+    spec:
+      containers:
+      - name: financial
+        image: kilo/financial:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9005
+        env:
+        - name: AI_BRAIN_URL
+          value: "http://kilo-ai-brain:9004"
+        - name: ALLOW_NETWORK
+          value: "false"
+        readinessProbe:
+          tcpSocket:
+            port: 9005
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        livenessProbe:
+          tcpSocket:
+            port: 9005
+          initialDelaySeconds: 30
+          periodSeconds: 10

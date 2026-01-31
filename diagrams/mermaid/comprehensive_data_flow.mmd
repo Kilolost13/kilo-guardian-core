@@ -1,0 +1,154 @@
+flowchart TD
+    %% User Interaction Layer
+    subgraph "User Interface Layer"
+        U[👤 User]
+        F[⚛️ React Frontend<br/>EnhancedDashboard]
+        WS[🔄 WebSocket<br/>Real-time Updates]
+    end
+
+    %% API Gateway Layer
+    subgraph "API Gateway Layer"
+        G[🚪 Gateway Service<br/>FastAPI]
+        Auth[🔐 Authentication<br/>JWT Tokens]
+        RateLimit[⚡ Rate Limiting]
+    end
+
+    %% Microservices Layer
+    subgraph "Microservices Layer"
+        H[📊 Habits Service<br/>Habit Tracking]
+        M[💊 Medications Service<br/>Med Management]
+        Fi[💰 Finance Service<br/>Financial Tracking]
+        R[🔔 Reminders Service<br/>Notification System]
+        V[🎤 Voice Service<br/>Speech Processing]
+        Cam[📷 Camera Service<br/>Image Processing]
+        Lib[📚 Library Service<br/>Knowledge Base]
+    end
+
+    %% AI Brain Layer
+    subgraph "AI Brain Layer"
+        AI[🧠 AI Brain Service<br/>Orchestrator]
+        Mem[🗃️ Memory System<br/>Vector Database]
+        Rag[🔍 RAG System<br/>Context Retrieval]
+        Emb[📐 Embeddings<br/>Text Processing]
+        Cons[🔄 Memory Consolidation<br/>Pattern Learning]
+        Search[🔎 Memory Search<br/>Semantic Queries]
+    end
+
+    %% ML Engine Layer
+    subgraph "ML Engine Layer"
+        ML[🤖 ML Engine<br/>Model Serving]
+        Insights[💡 Coaching Insights<br/>AI Analysis]
+        Pred[🔮 Predictions<br/>Pattern Recognition]
+        Rec[🎯 Recommendations<br/>Personalized Coaching]
+    end
+
+    %% Data Storage Layer
+    subgraph "Data Storage Layer"
+        PG[🐘 PostgreSQL<br/>Relational Data]
+        Redis[⚡ Redis Cache<br/>Session & Cache]
+        VecDB[🔗 Vector Database<br/>Embeddings Storage]
+        FileSys[📁 File System<br/>Images & Documents]
+    end
+
+    %% External Services Layer
+    subgraph "External Services Layer"
+        Ollama[🦙 Ollama<br/>Local LLM]
+        Models[📦 Model Storage<br/>Downloaded Models]
+    end
+
+    %% USB Data Transfer Layer
+    subgraph "USB Data Transfer Layer"
+        USB[💾 USB Module<br/>Secure Transfer]
+        Encrypt[🔒 Encryption<br/>Data Protection]
+        Validate[✅ Data Validation<br/>Integrity Checks]
+        Admin[👑 Admin Interface<br/>Data Management]
+        Export[📤 Data Export<br/>Therapy Progress]
+        Import[📥 Data Import<br/>Bulk Data Loading]
+    end
+
+    %% Data Flow Connections
+    U --> F
+    F --> WS
+    WS --> G
+
+    F --> G
+    G --> Auth
+    G --> RateLimit
+
+    G --> H
+    G --> M
+    G --> Fi
+    G --> R
+    G --> V
+    G --> Cam
+    G --> Lib
+
+    H --> AI
+    M --> AI
+    Fi --> AI
+    R --> AI
+    V --> AI
+    Cam --> AI
+    Lib --> AI
+
+    AI --> Mem
+    AI --> Rag
+    AI --> Emb
+    AI --> Cons
+    AI --> Search
+
+    AI --> ML
+    ML --> Insights
+    ML --> Pred
+    ML --> Rec
+
+    AI --> PG
+    AI --> Redis
+    AI --> VecDB
+    AI --> FileSys
+
+    ML --> Ollama
+    Ollama --> Models
+
+    %% USB Module Connections
+    Admin --> USB
+    USB --> Encrypt
+    USB --> Validate
+    USB --> Export
+    USB --> Import
+
+    %% Feedback Loops
+    Insights --> WS
+    Rec --> WS
+    Pred --> WS
+
+    %% Data Export Flow
+    PG --> Export
+    VecDB --> Export
+    FileSys --> Export
+    Export --> Encrypt
+
+    %% Data Import Flow
+    Import --> Validate
+    Validate --> PG
+    Validate --> VecDB
+    Validate --> FileSys
+
+    %% Styling
+    classDef userInterface fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef gateway fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef microservices fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef ai fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef ml fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    classDef storage fill:#f9fbe7,stroke:#827717,stroke-width:2px
+    classDef external fill:#efebe9,stroke:#3e2723,stroke-width:2px
+    classDef usb fill:#e0f2f1,stroke:#004d40,stroke-width:2px
+
+    class U,F,WS userInterface
+    class G,Auth,RateLimit gateway
+    class H,M,Fi,R,V,Cam,Lib microservices
+    class AI,Mem,Rag,Emb,Cons,Search ai
+    class ML,Insights,Pred,Rec ml
+    class PG,Redis,VecDB,FileSys storage
+    class Ollama,Models external
+    class USB,Encrypt,Validate,Admin,Export,Import usb

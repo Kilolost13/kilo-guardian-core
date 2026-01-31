@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kilo-config
+  namespace: kilo-guardian
+data:
+  ALLOW_NETWORK: "false"
+  OLLAMA_MODEL: "llama3.1:8b"
+  OLLAMA_URL: "http://kilo-ollama:11434"
+  # Updated service URLs for k3s service names
+  MEDS_URL: "http://kilo-meds:9001"
+  REMINDER_URL: "http://kilo-reminder:9002"
+  HABITS_URL: "http://kilo-habits:9003"
+  AI_BRAIN_URL: "http://kilo-ai-brain:9004"
+  FINANCIAL_URL: "http://kilo-financial:9005"
+  LIBRARY_OF_TRUTH_URL: "http://kilo-library:9006"
+  LIBRARY_URL: "http://kilo-library:9006"
+  CAM_URL: "http://kilo-cam:9007"
+  ML_ENGINE_URL: "http://kilo-ml-engine:9008"
+  VOICE_URL: "http://kilo-voice:9009"
+  USB_TRANSFER_URL: "http://kilo-usb-transfer:8006"

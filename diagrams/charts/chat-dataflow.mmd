@@ -1,0 +1,34 @@
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#4CAF50','primaryTextColor':'#fff','primaryBorderColor':'#2E7D32','lineColor':'#2196F3'}}}%%
+
+sequenceDiagram
+    participant User as 👤 User
+    participant UI as 🖥️ React UI
+    participant GW as 🚪 API Gateway
+    participant AI as 🧠 AI Brain
+    participant Embed as 📊 Embeddings<br/>(MiniLM)
+    participant VDB as 🗃️ Vector DB<br/>(HNSW)
+    participant LLM as 🤖 LLM<br/>(Llama 3.1)
+
+    User->>UI: Type: "What meds am I taking?"
+    UI->>GW: POST /chat
+    GW->>AI: Forward request
+
+    Note over AI: Parse message
+    AI->>Embed: Generate embedding (384-dim)
+    Embed-->>AI: [0.45, -0.12, ...]
+
+    AI->>VDB: Cosine similarity search
+    Note over VDB: Search 10,000+ memories<br/>in < 500ms
+    VDB-->>AI: Top 5 relevant memories
+
+    Note over AI: Build RAG context:<br/>System prompt +<br/>Memory context +<br/>User query
+
+    AI->>LLM: Send prompt (2048 tokens)
+    Note over LLM: Llama 3.1 8B<br/>inference (~1-2s)
+    LLM-->>AI: "You are taking Lisinopril..."
+
+    AI-->>GW: Response + sources
+    GW-->>UI: JSON response
+    UI-->>User: Display answer with sources
+
+    Note over User,LLM: Total time: 2-3 seconds

@@ -1,0 +1,9 @@
+# Prometheus scrape config for kilo-financial
+prometheus:
+  prometheusSpec:
+    additionalScrapeConfigs:
+      - job_name: 'kilo-financial'
+        metrics_path: /metrics
+        static_configs:
+          - targets: ['kilo-financial.kilo-guardian.svc.cluster.local:9005']
+        honor_labels: true

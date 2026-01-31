@@ -1,0 +1,136 @@
+flowchart LR
+  subgraph Client
+    U[User / Browser]
+    FE[kilo-react-frontend]
+  end
+
+  subgraph Edge
+    GW[Gateway / API]
+  end
+
+  subgraph Services
+    REM[Reminder Service\n(Uvicorn / FastAPI)]
+    FIN[Financial Service\n(Uvicorn / FastAPI)]
+    AI[AI Brain Service\n(Uvicorn / FastAPI)]
+  end
+
+  subgraph Datastores
+    DBrem[(Reminder DB)]
+    DBfin[(Financial DB)]
+  end
+
+  subgraph Processing
+    Scheduler[APScheduler]
+    OCR[pytesseract + tesseract]
+    Parser[Receipt parsing & categorization]
+  end
+
+  flowchart LR
+    subgraph Client
+      U[User / Browser]
+      FE[kilo-react-frontend]
+    end
+
+    subgraph Edge
+      GW[Gateway / API]
+    end
+
+    subgraph Services
+      REM[Reminder Service<br/> (Uvicorn / FastAPI)]
+      FIN[Financial Service<br/> (Uvicorn / FastAPI)]
+      AI[AI Brain Service<br/> (Uvicorn / FastAPI)]
+    end
+
+    subgraph Datastores
+      DBrem[(Reminder DB)]
+      DBfin[(Financial DB)]
+    end
+
+    subgraph Processing
+      Scheduler[APScheduler]
+      OCR[pytesseract + tesseract]
+      Parser[Receipt parsing & categorization]
+    end
+
+    subgraph IntegrationRunner
+      TestRunner[Test Runner<br/> microservice/integration/test_runner.py]
+      Mock[Mock HTTP Sink (9000)]
+    end
+
+    subgraph CI_and_Images
+      BaseImg[integration-base (GHCR)<br/> Dockerfile.base]
+      IntImg[ms-integration<br/> microservice/integration/Dockerfile]
+      CI[GitHub Actions<br/> (buildx, cache, push tags)]
+    end
+
+    flowchart LR
+      subgraph Client
+        U[User / Browser]
+        FE[kilo-react-frontend]
+      end
+
+      subgraph Edge
+        GW[Gateway / API]
+      end
+
+      subgraph Services
+        REM[Reminder Service<br/> (Uvicorn / FastAPI)]
+        FIN[Financial Service<br/> (Uvicorn / FastAPI)]
+        AI[AI Brain Service<br/> (Uvicorn / FastAPI)]
+      end
+
+      subgraph Datastores
+        DBrem[(Reminder DB)]
+        DBfin[(Financial DB)]
+      end
+
+      subgraph Processing
+        Scheduler[APScheduler]
+        OCR[pytesseract + tesseract]
+        Parser[Receipt parsing & categorization]
+      end
+
+      subgraph IntegrationRunner
+        TestRunner[Test Runner<br/> microservice/integration/test_runner.py]
+        Mock[Mock HTTP Sink (9000)]
+      end
+
+      subgraph CI_and_Images
+        BaseImg[integration-base (GHCR)<br/> Dockerfile.base]
+        IntImg[ms-integration<br/> microservice/integration/Dockerfile]
+        CI[GitHub Actions<br/> (buildx, cache, push tags)]
+      end
+
+      %% Client interactions
+      U --> FE --> GW
+
+      %% Main service routing
+      GW --> REM
+      GW --> FIN
+      GW --> AI
+
+      %% Reminder flow
+      REM --> DBrem
+      REM --> Scheduler
+      Scheduler -->|trigger| REM
+      REM -->|signed callback (HMAC) + retries| External[User callback URL<br/> (or Mock sink in integration)]
+
+      %% Financial flow
+      FIN --> Upload[Receipt upload API]
+      Upload --> OCR
+      OCR --> Parser
+      Parser --> DBfin
+      Parser -->|POST /ingest/finance| AI
+
+      %% Integration test flow
+      TestRunner --> Mock
+      TestRunner --> REM
+      TestRunner --> FIN
+      REM -->|callback observed| Mock
+      FIN -->|outgoing POST observed| Mock
+
+      %% CI / Docker flow
+      CI --> BaseImg
+      CI --> IntImg
+      BaseImg --> IntImg
+      IntImg -->|runs tests in-image (dev deps installed at runtime)| TestRunner

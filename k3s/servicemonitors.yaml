@@ -1,0 +1,43 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kilo-gateway-servicemonitor
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: kilo-gateway
+  namespaceSelector:
+    matchNames:
+      - kilo-guardian
+  endpoints:
+    - port: http
+      path: /admin/ai_brain/metrics
+      honorLabels: true
+      basicAuth:
+        username: ""
+        password: {
+          name: gateway-admin-token, key: token
+        }
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kilo-ai-brain-servicemonitor
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: kilo-ai-brain
+  namespaceSelector:
+    matchNames:
+      - kilo-guardian
+  endpoints:
+    - port: http
+      path: /metrics
+      honorLabels: true
+      basicAuth:
+        username: ""
+        password: {
+          name: ai-brain-metrics-token, key: token
+        }

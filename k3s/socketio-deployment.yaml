@@ -1,0 +1,138 @@
+---
+# Socket.IO Relay Service for WebSocket support
+# This provides real-time update capability to the frontend
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: socketio-relay-code
+  namespace: kilo-guardian
+data:
+  main.py: |
+    """Simple Socket.IO relay service for Kilo AI"""
+    import socketio
+    import uvicorn
+    from fastapi import FastAPI
+    import logging
+    import time
+
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+
+    app = FastAPI(title="Socket.IO Relay")
+
+    sio = socketio.AsyncServer(
+        async_mode='asgi',
+        cors_allowed_origins='*',
+        logger=True,
+        engineio_logger=False,
+        ping_timeout=60,
+        ping_interval=25
+    )
+
+    socket_app = socketio.ASGIApp(
+        socketio_server=sio,
+        other_asgi_app=app
+    )
+
+    @app.get("/health")
+    @app.get("/status")
+    async def health():
+        return {"status": "ok", "service": "socketio-relay"}
+
+    @sio.event
+    async def connect(sid, environ):
+        logger.info(f"Socket.IO client connected: {sid}")
+        await sio.emit('connected', {
+            'status': 'ok',
+            'message': 'Connected to Kilo AI',
+            'timestamp': time.time()
+        }, room=sid)
+
+    @sio.event
+    async def disconnect(sid):
+        logger.info(f"Socket.IO client disconnected: {sid}")
+
+    @sio.event
+    async def ping(sid, data=None):
+        await sio.emit('pong', {'timestamp': time.time()}, room=sid)
+
+    if __name__ == "__main__":
+        uvicorn.run(socket_app, host="0.0.0.0", port=9010, log_level="info")
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kilo-socketio
+  namespace: kilo-guardian
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kilo-socketio
+  template:
+    metadata:
+      labels:
+        app: kilo-socketio
+    spec:
+      containers:
+      - name: socketio
+        image: python:3.11-slim
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            pip install --no-cache-dir fastapi==0.104.1 uvicorn[standard]==0.24.0 python-socketio==5.11.0 aiohttp==3.9.1 && \
+            python /app/main.py
+        ports:
+        - containerPort: 9010
+        volumeMounts:
+        - name: code
+          mountPath: /app
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 9010
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 9010
+          initialDelaySeconds: 40
+          periodSeconds: 20
+      volumes:
+      - name: code
+        configMap:
+          name: socketio-relay-code
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kilo-socketio
+  namespace: kilo-guardian
+spec:
+  type: ClusterIP
+  selector:
+    app: kilo-socketio
+  ports:
+  - name: http
+    port: 9010
+    targetPort: 9010
+
+---
+# Service alias for compatibility
+apiVersion: v1
+kind: Service
+metadata:
+  name: socketio
+  namespace: kilo-guardian
+spec:
+  type: ClusterIP
+  selector:
+    app: kilo-socketio
+  ports:
+  - name: http
+    port: 9010
+    targetPort: 9010

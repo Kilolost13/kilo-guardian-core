@@ -1,0 +1,28 @@
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#4CAF50'}}}%%
+
+gantt
+    title Kilo AI Deployment Timeline (30-45 minutes)
+    dateFormat  mm
+    axisFormat %M min
+
+    section Hardware Setup
+    Unbox Beelink SER7           :done, 00, 5m
+    Install Ubuntu 22.04          :done, 05, 15m
+    Connect to network            :done, 20, 2m
+
+    section Software Install
+    Install Docker                :active, 22, 5m
+    Clone repository              :27, 2m
+    Build Docker images           :29, 10m
+
+    section AI Models
+    Download Llama 3.1 8B         :39, 8m
+
+    section Configuration
+    Start all services            :47, 2m
+    Configure tablet              :49, 5m
+    Add first medication          :54, 3m
+    Test chat interaction         :57, 2m
+
+    section Complete
+    System ready                  :milestone, 59, 0m

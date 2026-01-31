@@ -1,0 +1,12 @@
+# Sample values to configure kube-prometheus-stack (Helm) to scrape gateway admin metrics
+prometheus:
+  prometheusSpec:
+    additionalScrapeConfigs:
+      - job_name: 'ai_brain_via_gateway'
+        metrics_path: /admin/ai_brain/metrics
+        static_configs:
+          - targets: ['kilo-gateway.kilo-guardian.svc.cluster.local:8000']
+        bearer_token_file: /etc/prometheus/secrets/gateway_admin_token
+        honor_labels: true
+
+# Alternatively, define a ServiceMonitor for the gateway service (if CRD available)

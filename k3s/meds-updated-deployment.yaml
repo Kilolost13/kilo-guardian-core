@@ -1,0 +1,68 @@
+---
+# Updated Meds Deployment with /take endpoint
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kilo-meds-updated
+  namespace: kilo-guardian
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kilo-meds
+  template:
+    metadata:
+      labels:
+        app: kilo-meds
+    spec:
+      containers:
+      - name: meds
+        image: python:3.11-slim
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            echo "Installing dependencies..."
+            apt-get update -qq && apt-get install -y -qq tesseract-ocr libtesseract-dev libgl1 libglib2.0-0 > /dev/null 2>&1
+            pip install --no-cache-dir --quiet \
+              fastapi==0.104.1 \
+              uvicorn[standard]==0.24.0 \
+              Pillow==10.1.0 \
+              pytesseract==0.3.10 \
+              sqlmodel==0.0.14 \
+              httpx==0.25.2 \
+              numpy==1.26.2 \
+              opencv-python-headless==4.8.1.78
+
+            echo "10.43.63.197 ai_brain" >> /etc/hosts
+            echo "10.43.173.215 library_of_truth" >> /etc/hosts
+
+            echo "Starting meds service..."
+            cd /app && python -m uvicorn main:app --host 0.0.0.0 --port 9001
+        ports:
+        - containerPort: 9001
+        env:
+        - name: AI_BRAIN_URL
+          value: "http://kilo-ai-brain:9004/ingest/meds"
+        - name: ALLOW_NETWORK
+          value: "false"
+        volumeMounts:
+        - name: code
+          mountPath: /app
+        - name: data
+          mountPath: /data
+        readinessProbe:
+          tcpSocket:
+            port: 9001
+          initialDelaySeconds: 45
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: 9001
+          initialDelaySeconds: 60
+          periodSeconds: 20
+      volumes:
+      - name: code
+        configMap:
+          name: meds-code-updated
+      - name: data
+        emptyDir: {}

@@ -1,0 +1,44 @@
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#4CAF50'}}}%%
+
+graph LR
+    subgraph "Kilo AI (Air-Gapped)"
+        K1[Hardware: $650]
+        K2[Software: $0]
+        K3[Year 1: $650]
+        K4[Year 5: $650]
+        K5[Privacy: 100%]
+    end
+
+    subgraph "Cloud Alternative A"
+        C1[Hardware: $200]
+        C2[Subscription: $30/mo]
+        C3[Year 1: $560]
+        C4[Year 5: $2,000]
+        C5[Privacy: Vendor-controlled]
+    end
+
+    subgraph "Cloud Alternative B"
+        B1[Hardware: $0]
+        B2[Subscription: $50/mo]
+        B3[Year 1: $600]
+        B4[Year 5: $3,000]
+        B5[Privacy: Cloud storage]
+    end
+
+    style K1 fill:#4CAF50,stroke:#2E7D32,color:#fff
+    style K2 fill:#4CAF50,stroke:#2E7D32,color:#fff
+    style K3 fill:#2196F3,stroke:#1976D2,color:#fff
+    style K4 fill:#2196F3,stroke:#1976D2,color:#fff
+    style K5 fill:#4CAF50,stroke:#2E7D32,color:#fff
+
+    style C1 fill:#FFC107,stroke:#F57C00,color:#000
+    style C2 fill:#FFC107,stroke:#F57C00,color:#000
+    style C3 fill:#FF9800,stroke:#F57C00,color:#fff
+    style C4 fill:#F44336,stroke:#C62828,color:#fff
+    style C5 fill:#FFC107,stroke:#F57C00,color:#000
+
+    style B1 fill:#FFC107,stroke:#F57C00,color:#000
+    style B2 fill:#FFC107,stroke:#F57C00,color:#000
+    style B3 fill:#FF9800,stroke:#F57C00,color:#fff
+    style B4 fill:#F44336,stroke:#C62828,color:#fff
+    style B5 fill:#F44336,stroke:#C62828,color:#fff

@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kilo-financial-metrics-ingress
+  namespace: kilo-guardian
+  annotations:
+    kubernetes.io/ingress.class: traefik
+spec:
+  rules:
+  - host: kilo.local
+    http:
+      paths:
+      - path: /financial/metrics
+        pathType: Prefix
+        backend:
+          service:
+            name: kilo-financial
+            port:
+              number: 9005

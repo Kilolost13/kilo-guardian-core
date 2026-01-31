@@ -1,0 +1,54 @@
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#4CAF50'}}}%%
+
+flowchart LR
+    subgraph "Data Collection"
+        D1[Habit Completions<br/>Last 30 days]
+        D2[Health Metrics<br/>BP, Glucose, etc.]
+        D3[Medication Adherence<br/>Tracking data]
+        D4[Time Patterns<br/>Activity timing]
+    end
+
+    subgraph "ML Processing"
+        ML1[Pattern Recognition<br/>scikit-learn]
+        ML2[Time Series Analysis<br/>Trend detection]
+        ML3[Correlation Analysis<br/>Factor relationships]
+    end
+
+    subgraph "Predictive Models"
+        P1[Habit Predictor<br/>Adherence forecast]
+        P2[Health Predictor<br/>Risk patterns]
+        P3[Intervention Engine<br/>Personalized tips]
+    end
+
+    subgraph "Output"
+        O1[Proactive Insights<br/>Dashboard display]
+        O2[Smart Reminders<br/>Optimal timing]
+        O3[Recommendations<br/>Actionable advice]
+    end
+
+    D1 --> ML1
+    D2 --> ML1
+    D3 --> ML2
+    D4 --> ML3
+
+    ML1 --> P1
+    ML2 --> P2
+    ML3 --> P3
+
+    P1 --> O1
+    P2 --> O2
+    P3 --> O3
+
+    style D1 fill:#2196F3,stroke:#1976D2,color:#fff
+    style D2 fill:#2196F3,stroke:#1976D2,color:#fff
+    style D3 fill:#2196F3,stroke:#1976D2,color:#fff
+    style D4 fill:#2196F3,stroke:#1976D2,color:#fff
+    style ML1 fill:#9C27B0,stroke:#7B1FA2,color:#fff
+    style ML2 fill:#9C27B0,stroke:#7B1FA2,color:#fff
+    style ML3 fill:#9C27B0,stroke:#7B1FA2,color:#fff
+    style P1 fill:#FF9800,stroke:#F57C00,color:#fff
+    style P2 fill:#FF9800,stroke:#F57C00,color:#fff
+    style P3 fill:#FF9800,stroke:#F57C00,color:#fff
+    style O1 fill:#4CAF50,stroke:#2E7D32,color:#fff
+    style O2 fill:#4CAF50,stroke:#2E7D32,color:#fff
+    style O3 fill:#4CAF50,stroke:#2E7D32,color:#fff

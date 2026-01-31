@@ -1,0 +1,387 @@
+{
+  "object_results": {
+    "cooking": {
+      "basic_objects": [
+        {
+          "class": "round_dark_object",
+          "confidence": 0.8,
+          "bbox": [
+            250,
+            200,
+            141,
+            141
+          ]
+        }
+      ],
+      "unified_objects": [
+        {
+          "class": "round_dark_object",
+          "confidence": 0.8,
+          "bbox": [
+            250,
+            200,
+            141,
+            141
+          ]
+        }
+      ]
+    },
+    "watching_tv": {
+      "basic_objects": [
+        {
+          "class": "bright_object",
+          "confidence": 0.7,
+          "bbox": [
+            200,
+            150,
+            241,
+            181
+          ]
+        }
+      ],
+      "unified_objects": [
+        {
+          "class": "bright_object",
+          "confidence": 0.7,
+          "bbox": [
+            200,
+            150,
+            241,
+            181
+          ]
+        }
+      ]
+    },
+    "working_on_computer": {
+      "basic_objects": [
+        {
+          "class": "bright_object",
+          "confidence": 0.7,
+          "bbox": [
+            250,
+            100,
+            141,
+            151
+          ]
+        }
+      ],
+      "unified_objects": [
+        {
+          "class": "bright_object",
+          "confidence": 0.7,
+          "bbox": [
+            250,
+            100,
+            141,
+            151
+          ]
+        }
+      ]
+    }
+  },
+  "activity_results": {
+    "watching_tv": {
+      "posture": "sitting",
+      "objects": [
+        {
+          "class": "bright_object",
+          "confidence": 0.8
+        }
+      ],
+      "activity_result": {
+        "primary_activity": "watching_tv",
+        "confidence": 0.8,
+        "all_scores": {
+          "watching_tv": 4,
+          "working_on_computer": 3,
+          "cooking": 0,
+          "eating": 0,
+          "sneaking_snacks": 0,
+          "exercising": 0,
+          "reading": 3,
+          "sleeping": 0,
+          "present": 1
+        },
+        "detected_objects": [
+          "bright_object"
+        ],
+        "posture": "sitting"
+      }
+    },
+    "working_on_computer": {
+      "posture": "sitting",
+      "objects": [
+        {
+          "class": "bright_object",
+          "confidence": 0.9
+        }
+      ],
+      "activity_result": {
+        "primary_activity": "watching_tv",
+        "confidence": 0.8,
+        "all_scores": {
+          "watching_tv": 4,
+          "working_on_computer": 3,
+          "cooking": 0,
+          "eating": 0,
+          "sneaking_snacks": 0,
+          "exercising": 0,
+          "reading": 3,
+          "sleeping": 0,
+          "present": 1
+        },
+        "detected_objects": [
+          "bright_object"
+        ],
+        "posture": "sitting"
+      }
+    },
+    "cooking": {
+      "posture": "standing",
+      "objects": [
+        {
+          "class": "round_dark_object",
+          "confidence": 0.85
+        }
+      ],
+      "activity_result": {
+        "primary_activity": "cooking",
+        "confidence": 0.8,
+        "all_scores": {
+          "watching_tv": 0,
+          "working_on_computer": 0,
+          "cooking": 4,
+          "eating": 0,
+          "sneaking_snacks": 3,
+          "exercising": 1,
+          "reading": 0,
+          "sleeping": 0,
+          "present": 1
+        },
+        "detected_objects": [
+          "round_dark_object"
+        ],
+        "posture": "standing"
+      }
+    },
+    "eating": {
+      "posture": "sitting",
+      "objects": [
+        {
+          "class": "round_dark_object",
+          "confidence": 0.7
+        }
+      ],
+      "activity_result": {
+        "primary_activity": "cooking",
+        "confidence": 0.8,
+        "all_scores": {
+          "watching_tv": 1,
+          "working_on_computer": 1,
+          "cooking": 4,
+          "eating": 2,
+          "sneaking_snacks": 3,
+          "exercising": 0,
+          "reading": 3,
+          "sleeping": 0,
+          "present": 1
+        },
+        "detected_objects": [
+          "round_dark_object"
+        ],
+        "posture": "sitting"
+      }
+    },
+    "exercising": {
+      "posture": "standing",
+      "objects": [],
+      "activity_result": {
+        "primary_activity": "present",
+        "confidence": 0.2,
+        "all_scores": {
+          "watching_tv": 0,
+          "working_on_computer": 0,
+          "cooking": 0,
+          "eating": 0,
+          "sneaking_snacks": 0,
+          "exercising": 1,
+          "reading": 0,
+          "sleeping": 0,
+          "present": 1
+        },
+        "detected_objects": [],
+        "posture": "standing"
+      }
+    },
+    "reading": {
+      "posture": "sitting",
+      "objects": [],
+      "activity_result": {
+        "primary_activity": "reading",
+        "confidence": 0.6,
+        "all_scores": {
+          "watching_tv": 1,
+          "working_on_computer": 1,
+          "cooking": 0,
+          "eating": 0,
+          "sneaking_snacks": 0,
+          "exercising": 0,
+          "reading": 3,
+          "sleeping": 0,
+          "present": 1
+        },
+        "detected_objects": [],
+        "posture": "sitting"
+      }
+    },
+    "sleeping": {
+      "posture": "lying",
+      "objects": [],
+      "activity_result": {
+        "primary_activity": "sleeping",
+        "confidence": 1.0,
+        "all_scores": {
+          "watching_tv": 0,
+          "working_on_computer": 0,
+          "cooking": 0,
+          "eating": 0,
+          "sneaking_snacks": 0,
+          "exercising": 0,
+          "reading": 0,
+          "sleeping": 5,
+          "present": 1
+        },
+        "detected_objects": [],
+        "posture": "lying"
+      }
+    }
+  },
+  "pose_results": {
+    "standing": {
+      "landmarks": [
+        [
+          0.5,
+          0.8
+        ],
+        [
+          0.45,
+          0.75
+        ],
+        [
+          0.55,
+          0.75
+        ]
+      ],
+      "detected": "unknown"
+    },
+    "sitting": {
+      "landmarks": [
+        [
+          0.5,
+          0.6
+        ],
+        [
+          0.45,
+          0.65
+        ],
+        [
+          0.55,
+          0.65
+        ]
+      ],
+      "detected": "unknown"
+    },
+    "lying": {
+      "landmarks": [
+        [
+          0.5,
+          0.9
+        ],
+        [
+          0.45,
+          0.85
+        ],
+        [
+          0.55,
+          0.85
+        ]
+      ],
+      "detected": "unknown"
+    },
+    "unknown": {
+      "landmarks": [],
+      "detected": "unknown"
+    }
+  },
+  "data_results": {
+    "activity_data": {
+      "timestamp": "2025-12-23T10:30:00Z",
+      "activity": "cooking",
+      "confidence": 0.85,
+      "posture": "standing",
+      "detected_objects": [
+        "round_dark_object"
+      ],
+      "all_activities": {
+        "watching_tv": 0.1,
+        "working_on_computer": 0.05,
+        "cooking": 4.0,
+        "eating": 0.2,
+        "sneaking_snacks": 0.1,
+        "exercising": 0.1,
+        "reading": 0.1,
+        "sleeping": 0.0,
+        "present": 1.0
+      }
+    },
+    "scene_data": {
+      "timestamp": "2025-12-23T10:30:00Z",
+      "scene_analysis": {
+        "activity": {
+          "timestamp": "2025-12-23T10:30:00Z",
+          "activity": "cooking",
+          "confidence": 0.85,
+          "posture": "standing",
+          "detected_objects": [
+            "round_dark_object"
+          ],
+          "all_activities": {
+            "watching_tv": 0.1,
+            "working_on_computer": 0.05,
+            "cooking": 4.0,
+            "eating": 0.2,
+            "sneaking_snacks": 0.1,
+            "exercising": 0.1,
+            "reading": 0.1,
+            "sleeping": 0.0,
+            "present": 1.0
+          }
+        },
+        "objects": [
+          {
+            "class": "round_dark_object",
+            "confidence": 0.85,
+            "bbox": [
+              250,
+              200,
+              140,
+              140
+            ]
+          }
+        ],
+        "posture": "standing",
+        "scene_context": {
+          "lighting": "normal",
+          "location_type": "kitchen",
+          "activity_indicators": [
+            "food_preparation"
+          ],
+          "confidence": 0.7
+        },
+        "pose_detected": true
+      }
+    },
+    "structures_valid": true
+  },
+  "success_rate": 100.0
+}

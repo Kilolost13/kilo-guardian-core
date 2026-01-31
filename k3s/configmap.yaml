@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kilo-config
+  namespace: kilo-guardian
+data:
+  ALLOW_NETWORK: "false"
+  OLLAMA_MODEL: "llama3.1:8b"
+  OLLAMA_URL: "http://kilo-ollama:11434"
