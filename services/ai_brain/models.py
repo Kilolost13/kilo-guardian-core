@@ -69,3 +69,17 @@ class SentReminder(SQLModel, table=True):
     reminder_text: Optional[str] = None
     when: Optional[str] = None
     received_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class KiloResponse(SQLModel, table=True):
+    """Store Kilo's responses for quality monitoring and drift detection."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: str
+    user_query: str  # Store query for context
+    response: str  # Kilo's actual response
+    tools_used: Optional[str] = Field(default=None)  # JSON list of tools executed
+    response_length: int = 0  # Character count
+    model_used: Optional[str] = Field(default=None)  # Which LLM model
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    flagged: bool = False  # Manual flag for problematic responses
+    notes: Optional[str] = Field(default=None)  # Review notes

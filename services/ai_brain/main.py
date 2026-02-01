@@ -312,12 +312,20 @@ except Exception as e:
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-# Mount static files for the "Kilo Lite" frontend
-app.mount("/static", StaticFiles(directory="services/ai_brain/static"), name="static")
+# Mount static files for the "Kilo Lite" frontend (if directory exists)
+import os.path
+if os.path.exists("static"):
+    app.mount("/static", StaticFiles(directory="static"), name="static")
 
-@app.get("/")
-async def read_root():
-    return FileResponse('services/ai_brain/static/index.html')
+    @app.get("/")
+    async def read_root():
+        return FileResponse('static/index.html')
+else:
+    logging.warning("Static directory not found, skipping static file serving")
+
+    @app.get("/")
+    async def read_root():
+        return {"message": "Kilo AI Brain API", "status": "ok"}
 
 # Health check endpoints
 @app.get("/status")
@@ -547,18 +555,19 @@ async def chat_json(req: ChatRequest):
 
     # Normal chat with RAG
     try:
-        from .rag import generate_rag_response, store_conversation_memory
+        from .rag import generate_rag_response_with_tools, store_conversation_memory
         s = get_session()
 
-        # Generate RAG response
-        rag_result = generate_rag_response(
+        # Generate RAG response with tool support
+        rag_result = generate_rag_response_with_tools(
             user_query=req.message,
             session=s,
-            max_context_memories=5
+            max_context_memories=5,
+            enable_tools=True  # Enable real-time data access
         )
 
         response_text = rag_result["response"]
-        
+
         # Check if response was a breaker message (starts with lightning or snowflake icon from breaker)
         if response_text.startswith("⚡") or response_text.startswith("❄️"):
              # It's a safety block, return it without storing memory (avoids polluting history)
@@ -573,6 +582,24 @@ async def chat_json(req: ChatRequest):
             )
         except Exception as e:
             logging.warning(f"Failed to store conversation memory: {e}")
+
+        # Log Kilo's response for quality monitoring and drift detection
+        try:
+            from .models import KiloResponse
+            kilo_log = KiloResponse(
+                user_id=req.user,
+                user_query=req.message,
+                response=response_text,
+                tools_used=json.dumps(rag_result.get("tools_used", [])),
+                response_length=len(response_text),
+                model_used=rag_result.get("model", "unknown"),
+                timestamp=datetime.datetime.utcnow()
+            )
+            s.add(kilo_log)
+            s.commit()
+            logger.info(f"[RESPONSE LOG] Logged response {kilo_log.id} for user {req.user}")
+        except Exception as e:
+            logging.warning(f"Failed to log Kilo response: {e}")
 
         return ChatResponse(response=response_text, context=req.context)
 
@@ -1475,3 +1502,274 @@ async def get_goal_templates():
 
 
 # ===== END PHASE 3 & 4 FEATURES =====
+
+
+# ===== PROACTIVE AGENT INTEGRATION =====
+
+# Import agent bridge
+try:
+    from .agent_bridge import agent_queue, agent_handler, AgentMessage, AgentCommand, AgentResponse
+except:
+    try:
+        from agent_bridge import agent_queue, agent_handler, AgentMessage, AgentCommand, AgentResponse
+    except:
+        # Fallback - agent bridge not available
+        agent_queue = None
+        agent_handler = None
+        AgentMessage = None
+        AgentCommand = None
+        AgentResponse = None
+
+
+@app.post("/agent/notify")
+async def agent_notify(message: Dict[str, Any]):
+    """
+    Endpoint for proactive agent to post notifications to chat
+
+    Example:
+    POST /agent/notify
+    {
+        "type": "reminder",
+        "content": "⏰ Reminder in 30 minutes: Take Adderall",
+        "priority": "high"
+    }
+    """
+    if agent_queue is None or AgentMessage is None:
+        raise HTTPException(status_code=503, detail="Agent bridge not available")
+
+    try:
+        agent_msg = AgentMessage(**message)
+        await agent_queue.add_message(agent_msg)
+        return {"status": "ok", "message": "Notification queued"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid message format: {str(e)}")
+
+
+@app.get("/agent/messages")
+async def get_agent_messages(since_minutes: int = 5, count: int = 10):
+    """
+    Get pending agent messages for chat display
+
+    Query params:
+    - since_minutes: Get messages from last N minutes (default 5)
+    - count: Max number of messages to return (default 10)
+    """
+    if agent_queue is None:
+        return {"messages": []}
+
+    from datetime import datetime, timedelta
+    since = datetime.now() - timedelta(minutes=since_minutes)
+
+    messages = await agent_queue.get_pending_messages(since=since)
+
+    # Convert to dict for JSON serialization
+    return {
+        "messages": [
+            {
+                "type": msg.type,
+                "content": msg.content,
+                "priority": msg.priority,
+                "timestamp": msg.timestamp.isoformat(),
+                "metadata": msg.metadata
+            }
+            for msg in messages[-count:]
+        ]
+    }
+
+
+@app.post("/agent/command")
+async def execute_agent_command(command: Dict[str, Any]):
+    """
+    Execute a command through the proactive agent
+
+    Example:
+    POST /agent/command
+    {
+        "command": "show my spending today",
+        "params": {},
+        "user": "user"
+    }
+    """
+    if agent_handler is None or AgentCommand is None:
+        raise HTTPException(status_code=503, detail="Agent handler not available")
+
+    try:
+        cmd = AgentCommand(**command)
+        response = await agent_handler.handle_command(cmd)
+
+        return {
+            "success": response.success,
+            "message": response.message,
+            "data": response.data
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error executing command: {str(e)}",
+            "data": None
+        }
+
+
+@app.get("/agent/status")
+async def get_agent_status():
+    """Get status of agent integration"""
+    if agent_queue is None:
+        return {"status": "unavailable", "message": "Agent bridge not loaded"}
+
+    recent = await agent_queue.get_recent_messages(count=5)
+
+    return {
+        "status": "ok",
+        "queue_size": len(agent_queue.messages),
+        "recent_message_count": len(recent),
+        "last_message": recent[-1].timestamp.isoformat() if recent else None
+    }
+
+
+# ===== KILO RESPONSE MONITORING =====
+
+@app.get("/responses/recent")
+async def get_recent_responses(
+    user_id: Optional[str] = None,
+    limit: int = 50,
+    flagged_only: bool = False
+):
+    """
+    Retrieve recent Kilo responses for quality monitoring and drift detection.
+
+    Args:
+        user_id: Filter by specific user (default: all users)
+        limit: Number of responses to return (default: 50, max: 500)
+        flagged_only: Only return flagged responses (default: False)
+    """
+    try:
+        from .models import KiloResponse
+        s = get_session()
+
+        limit = min(limit, 500)  # Cap at 500
+
+        query = s.query(KiloResponse)
+
+        if user_id:
+            query = query.filter(KiloResponse.user_id == user_id)
+
+        if flagged_only:
+            query = query.filter(KiloResponse.flagged == True)
+
+        responses = query.order_by(KiloResponse.timestamp.desc()).limit(limit).all()
+
+        return {
+            "count": len(responses),
+            "responses": [
+                {
+                    "id": r.id,
+                    "user_id": r.user_id,
+                    "user_query": r.user_query,
+                    "response": r.response,
+                    "tools_used": json.loads(r.tools_used) if r.tools_used else [],
+                    "response_length": r.response_length,
+                    "model_used": r.model_used,
+                    "timestamp": r.timestamp.isoformat(),
+                    "flagged": r.flagged,
+                    "notes": r.notes
+                }
+                for r in responses
+            ]
+        }
+    except Exception as e:
+        logger.error(f"Error retrieving responses: {e}")
+        return {"error": str(e), "count": 0, "responses": []}
+
+
+@app.post("/responses/{response_id}/flag")
+async def flag_response(response_id: int, notes: Optional[str] = None):
+    """
+    Flag a response as problematic for review.
+
+    Args:
+        response_id: ID of the response to flag
+        notes: Optional notes about why it was flagged
+    """
+    try:
+        from .models import KiloResponse
+        s = get_session()
+
+        response = s.query(KiloResponse).filter(KiloResponse.id == response_id).first()
+
+        if not response:
+            raise HTTPException(status_code=404, detail="Response not found")
+
+        response.flagged = True
+        if notes:
+            response.notes = notes
+
+        s.commit()
+
+        return {
+            "success": True,
+            "message": f"Response {response_id} flagged",
+            "response_id": response_id
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error flagging response: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/responses/stats")
+async def get_response_stats(user_id: Optional[str] = None, days: int = 7):
+    """
+    Get statistics about Kilo's responses for drift detection.
+
+    Args:
+        user_id: Filter by specific user (default: all users)
+        days: Number of days to analyze (default: 7)
+    """
+    try:
+        from .models import KiloResponse
+        from sqlalchemy import func
+        s = get_session()
+
+        cutoff_date = datetime.datetime.utcnow() - datetime.timedelta(days=days)
+
+        query = s.query(KiloResponse).filter(KiloResponse.timestamp >= cutoff_date)
+
+        if user_id:
+            query = query.filter(KiloResponse.user_id == user_id)
+
+        total_responses = query.count()
+        flagged_count = query.filter(KiloResponse.flagged == True).count()
+
+        # Average response length
+        avg_length = s.query(func.avg(KiloResponse.response_length)).filter(
+            KiloResponse.timestamp >= cutoff_date
+        ).scalar() or 0
+
+        # Most common tools used
+        all_responses = query.all()
+        tool_usage = defaultdict(int)
+        for r in all_responses:
+            if r.tools_used:
+                try:
+                    tools = json.loads(r.tools_used)
+                    for tool in tools:
+                        tool_usage[tool] += 1
+                except:
+                    pass
+
+        return {
+            "period_days": days,
+            "total_responses": total_responses,
+            "flagged_responses": flagged_count,
+            "flagged_percentage": (flagged_count / total_responses * 100) if total_responses > 0 else 0,
+            "avg_response_length": int(avg_length),
+            "tool_usage": dict(tool_usage),
+            "user_id": user_id or "all"
+        }
+    except Exception as e:
+        logger.error(f"Error getting response stats: {e}")
+        return {"error": str(e)}
+
+
+# ===== END PROACTIVE AGENT INTEGRATION =====

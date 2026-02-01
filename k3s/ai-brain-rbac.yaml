@@ -1,0 +1,46 @@
+---
+# ServiceAccount for AI Brain
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kilo-ai-brain
+  namespace: kilo-guardian
+---
+# Role with permissions to read K8s resources
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kilo-ai-brain-reader
+  namespace: kilo-guardian
+rules:
+  # Allow reading pods
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+  # Allow reading services
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "list"]
+  # Allow reading deployments
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list"]
+  # Allow reading events
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["get", "list"]
+---
+# RoleBinding to grant permissions to the ServiceAccount
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kilo-ai-brain-reader-binding
+  namespace: kilo-guardian
+subjects:
+  - kind: ServiceAccount
+    name: kilo-ai-brain
+    namespace: kilo-guardian
+roleRef:
+  kind: Role
+  name: kilo-ai-brain-reader
+  apiGroup: rbac.authorization.k8s.io

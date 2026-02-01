@@ -36,7 +36,7 @@ MODEL_DIR = os.path.expanduser("~/.lmstudio/models")
 CODE_DIR = os.path.expanduser("~/Desktop/AI_stuff/old_hacksaw_fingers")
 HP_IP = "192.168.68.56"
 KUBECONFIG = os.path.expanduser("~/.kube/hp-k3s-config")
-LLM_PORT = 11434
+LLM_PORT = 8080  # llama.cpp server (change to 11434 for Ollama)
 LLM_URL = f"http://localhost:{LLM_PORT}"
 
 # Set environment

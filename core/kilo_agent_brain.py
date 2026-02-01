@@ -23,11 +23,19 @@ class KiloAgentBrain:
     Uses LLM function calling to make smart decisions
     """
 
-    def __init__(self, llm_url: str = "http://localhost:11434", model: str = "Phi-3-mini-4k-instruct-q4.gguf"):
+    def __init__(self, llm_url: str = "http://localhost:8080", model: str = "phi3-mini"):
+        """
+        Initialize Kilo Agent Brain
+
+        Args:
+            llm_url: LLM server URL (default: http://localhost:8080 for llama.cpp)
+                    Change to http://localhost:11434 if using Ollama
+            model: Model name (phi3-mini for llama.cpp, phi3 for Ollama)
+        """
         self.llm_url = llm_url
         self.model = model
         self.conversation_history = []
-        # llama.cpp uses OpenAI-compatible API
+        # llama.cpp uses OpenAI-compatible API at /v1/chat/completions
 
     def get_tool_schemas(self) -> List[Dict[str, Any]]:
         """Minimal tool schemas for low-context models like Phi-3"""
@@ -285,7 +293,7 @@ class KiloAgentBrain:
             return f"Error communicating with LLM: {e}"
 
 
-def get_kilo_brain(llm_url: str = "http://localhost:11434", model: str = "Phi-3-mini-4k-instruct-q4.gguf"):
+def get_kilo_brain(llm_url: str = "http://localhost:8080", model: str = "phi3-mini"):
     """Factory function to get Kilo brain instance"""
     return KiloAgentBrain(llm_url=llm_url, model=model)
 

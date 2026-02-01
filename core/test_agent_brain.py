@@ -29,7 +29,7 @@ def test_brain_basics():
         print(f"     - {tool['name']}: {tool['description'][:60]}...")
     print()
 
-    # Test cluster analysis (will only work if Ollama is running)
+    # Test cluster analysis (will only work if llama.cpp server is running)
     print("3. Testing cluster state analysis...")
     test_data = {
         "pods": {
@@ -59,10 +59,10 @@ def test_brain_basics():
                 print()
         else:
             print("   ⚠️ No proposals generated")
-            print("      (This is OK if Ollama isn't running or model doesn't support function calling)")
+            print("      (This is OK if llama.cpp server isn't running or model doesn't support function calling)")
     except Exception as e:
         print(f"   ⚠️ Error: {e}")
-        print("      (Make sure Ollama is running: 'ollama serve')")
+        print("      (Make sure llama.cpp server is running)")
     print()
 
     print("=" * 70)
@@ -70,8 +70,8 @@ def test_brain_basics():
     print("=" * 70)
     print()
     print("Next steps:")
-    print("1. Make sure Ollama is running: ollama serve")
-    print("2. Pull a model: ollama pull llama3.2")
+    print("1. Make sure llama.cpp server is running on port 8080")
+    print("2. Model should be loaded (e.g., Phi-3-mini-4k-instruct-q4.gguf)")
     print("3. Launch agent UI: ~/projects/kilo/scripts/launch_kilo_agent.sh")
     print()
 

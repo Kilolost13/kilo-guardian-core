@@ -1,0 +1,20 @@
+[Unit]
+Description=Kilo Agent API - Chat Integration Service
+After=network.target k3s.service
+Wants=k3s.service
+
+[Service]
+Type=simple
+User=kilo
+WorkingDirectory=/home/kilo
+Environment="PORT=9200"
+Environment="REMINDER_URL=http://10.43.144.204:9002"
+Environment="FINANCIAL_URL=http://10.43.216.158:9005"
+Environment="HABITS_URL=http://10.43.142.9:9000"
+Environment="MEDS_URL=http://10.43.214.225:9001"
+ExecStart=/usr/bin/python3 /home/kilo/kilo_agent_api.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

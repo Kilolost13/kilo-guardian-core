@@ -16,7 +16,7 @@ class CircuitBreaker:
     
     def __init__(self):
         # Safety Thresholds
-        self.MAX_PROMPT_CHARS = 1500  # Conservative limit (~350-400 tokens) to prevent long processing spikes
+        self.MAX_PROMPT_CHARS = 4000  # Increased for tool-augmented prompts (RAG with tools needs more space)
         self.COOLDOWN_SECONDS = 5.0   # Time to let VRMs/CPU cool down between requests
         
         self.last_request_time = 0

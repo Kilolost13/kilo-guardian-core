@@ -46,7 +46,15 @@ class KiloAgent:
     6. Earns autonomy for proven patterns
     """
 
-    def __init__(self, llm_url="http://localhost:11434", kubeconfig=None, model="Phi-3-mini-4k-instruct-q4.gguf"):
+    def __init__(self, llm_url="http://localhost:8080", kubeconfig=None, model="phi3-mini"):
+        """
+        Initialize Kilo Agent
+
+        Args:
+            llm_url: LLM server URL (default: http://localhost:8080 for llama.cpp)
+            kubeconfig: Path to kubeconfig file
+            model: Model name to use
+        """
         self.llm_url = llm_url
         self.model = model
         self.kubeconfig = kubeconfig or os.path.expanduser("~/.kube/hp-k3s-config")

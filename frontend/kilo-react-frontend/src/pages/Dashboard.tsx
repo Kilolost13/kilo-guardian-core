@@ -156,6 +156,45 @@ const Dashboard: React.FC = () => {
     };
   }, []);
 
+  // Agent integration - poll for proactive agent messages
+  useEffect(() => {
+    const fetchAgentMessages = async () => {
+      try {
+        // Agent API runs on port 9200
+        const response = await fetch('http://192.168.68.56:9200/agent/messages?since_minutes=1');
+        const data = await response.json();
+
+        if (data.messages && data.messages.length > 0) {
+          // Add agent messages to chat
+          const agentMessages: Message[] = data.messages.map((msg: any) => ({
+            id: `agent-${msg.timestamp}`,
+            role: 'ai' as const,
+            content: `🤖 **KILO:** ${msg.content}`,
+            timestamp: new Date(msg.timestamp)
+          }));
+
+          setMessages(prev => {
+            // Avoid duplicates by checking if message already exists
+            const existingIds = new Set(prev.map(m => m.id));
+            const newMessages = agentMessages.filter(m => !existingIds.has(m.id));
+            return [...prev, ...newMessages];
+          });
+        }
+      } catch (error) {
+        // Silently fail - agent API might not be available
+        console.debug('Agent messages fetch skipped:', error);
+      }
+    };
+
+    // Initial fetch
+    fetchAgentMessages();
+
+    // Poll every 30 seconds
+    const interval = setInterval(fetchAgentMessages, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   const fetchInsights = async () => {
     try {
       const response = await api.get('/ml/insights/patterns');
@@ -194,11 +233,41 @@ const Dashboard: React.FC = () => {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const messageText = input;
     setInput('');
     setLoading(true);
 
     try {
-      const response = await chatService.sendMessage(input);
+      // Check if message is an agent command
+      const agentKeywords = ['remind', 'spending', 'spend', 'money', 'budget', 'habit', 'med', 'medication', 'financial'];
+      const isAgentCommand = agentKeywords.some(keyword =>
+        messageText.toLowerCase().includes(keyword)
+      );
+
+      let response: string;
+
+      if (isAgentCommand) {
+        // Route to agent API
+        try {
+          const agentResponse = await fetch('http://192.168.68.56:9200/agent/command', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              command: messageText,
+              user: 'user'
+            })
+          });
+          const agentData = await agentResponse.json();
+          response = agentData.success ? agentData.message : 'Sorry, I couldn\'t process that command.';
+        } catch (err) {
+          // Fallback to regular chat if agent unavailable
+          response = await chatService.sendMessage(messageText);
+        }
+      } else {
+        // Regular AI chat
+        response = await chatService.sendMessage(messageText);
+      }
+
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'ai',

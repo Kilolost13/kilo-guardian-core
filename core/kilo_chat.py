@@ -20,7 +20,7 @@ import os
 from kilo_memory import get_kilo_memory
 from kilo_router import get_kilo_router
 
-LLM_URL = "http://localhost:11434"
+LLM_URL = "http://localhost:8080"  # llama.cpp server (change to 11434 for Ollama)
 KUBECONFIG = os.path.expanduser("~/.kube/hp-k3s-config")
 HP_IP = "192.168.68.56"
 

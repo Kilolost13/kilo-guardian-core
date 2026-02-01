@@ -22,7 +22,7 @@ try:
         spec = importlib.util.spec_from_file_location("ai_brain._local_models", str(candidate))
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
-        for name in ("SedentaryState", "CamReport", "MedRecord", "MedAdherence", "HabitEvent", "HabitProfile", "UserSettings", "SentReminder"):
+        for name in ("SedentaryState", "CamReport", "MedRecord", "MedAdherence", "HabitEvent", "HabitProfile", "UserSettings", "SentReminder", "KiloResponse"):
             if hasattr(mod, name):
                 globals()[name] = getattr(mod, name)
                 if name not in __all__:
