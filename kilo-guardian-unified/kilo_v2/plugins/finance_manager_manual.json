@@ -1,0 +1,17 @@
+{
+  "name": "finance_manager_manual",
+  "version": "1.0.0",
+  "description": "Manual transaction entry with email sync stub for financial tracking",
+  "author": "Kilo Guardian",
+  "isolate": true,
+  "requires_sandbox": false,
+  "requirements": [],
+  "permissions": [
+    "database",
+    "file_system"
+  ],
+  "configuration": {
+    "db_path": "finance.db",
+    "email_sync_enabled": false
+  }
+}

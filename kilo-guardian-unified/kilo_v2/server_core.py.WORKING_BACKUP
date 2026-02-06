@@ -1,0 +1,1462 @@
+import sys, os, time, platform, logging, psutil, json
+from fastapi import FastAPI, Response, Depends, HTTPException, status, UploadFile, File, Request
+from fastapi.responses import StreamingResponse, RedirectResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+from fastapi.security import APIKeyHeader
+from typing import Optional, List, Dict, Any
+from datetime import datetime
+import csv
+from io import StringIO
+
+# --- PATH AND LOGGING SETUP ---
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler("server.log"),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger("ServerCore")
+
+# FLATTENED IMPORT STRUCTURE
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from . import config
+from plugin_manager import PluginManager
+from self_healer import SelfHealer
+from camera_service import get_camera_service
+
+try:
+    from reasoning_engine import synthesize_answer, precompute_plugin_embeddings
+    logger.info("✅ Reasoning Engine loaded successfully.")
+except ImportError as e:
+    # CRITICAL FIX: Log the actual error message 'e' so we can see it
+    logger.error(f"❌ CRITICAL ERROR loading reasoning_engine: {e}")
+    # Print it to the console too, just in case
+    import traceback
+    traceback.print_exc()
+    # capture the error text so the fallback function does not reference
+    # a transient exception variable that may not exist when called later.
+    _reasoning_import_error = str(e)
+
+    def synthesize_answer(q, pm=None):
+        return f"System Error: Brain offline. Error details: {_reasoning_import_error}"
+    
+    def precompute_plugin_embeddings(pm):
+        logger.warning("Precompute embeddings not available - reasoning engine not loaded")
+
+# --- API Key Authentication Dependency ---
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+async def get_api_key(api_key: str = Depends(api_key_header)):
+    if config.KILO_API_KEY is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="API key not configured on the server."
+        )
+    if api_key is None or api_key != config.KILO_API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing API Key"
+        )
+    return api_key
+
+app = FastAPI()
+
+# Init Plugins
+pm = PluginManager()
+healer = SelfHealer(llm_engine=None) # Pass actual LLM object later
+
+# Init Camera Service (CORE FEATURE)
+camera_service = None
+
+# Init Security Monitor
+security_monitor = None
+
+@app.on_event("startup")
+async def startup_event():
+    global camera_service, security_monitor
+    
+    logger.info("🚀 Kilo Guardian starting up...")
+    
+    # Start camera service first (core feature)
+    camera_service = get_camera_service()
+    logger.info("✅ Camera service initialized")
+    
+    # Initialize security monitor
+    try:
+        from security_monitor import get_security_monitor
+        security_monitor = get_security_monitor()
+        
+        # Create initial integrity baseline if it doesn't exist
+        if not os.path.exists('kilo_data/file_integrity_baseline.json'):
+            logger.info("Creating initial security baseline...")
+            security_monitor.create_baseline()
+        
+        # Start security monitoring
+        security_monitor.start_monitoring()
+        logger.info("✅ Security monitoring initialized and started")
+    except Exception as e:
+        logger.error(f"Failed to initialize security monitor: {e}")
+    
+    # Start self-healer health monitoring
+    try:
+        healer.start_health_monitoring()
+        logger.info("✅ Self-healer health monitoring started")
+    except Exception as e:
+        logger.error(f"Failed to start self-healer: {e}")
+    
+    # Then load plugins
+    await pm.load_plugins()
+    pm.start_all()
+    try:
+        pm.enable_watchdog()
+    except Exception as e:
+        logger.warning(f"Failed to start plugin watchdog: {e}")
+    
+    # Precompute plugin embeddings for fast query routing
+    try:
+        precompute_plugin_embeddings(pm)
+    except Exception as e:
+        logger.warning(f"Failed to precompute plugin embeddings: {e}")
+    
+    logger.info("🎯 Kilo Guardian fully operational")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup on shutdown."""
+    logger.info("🛑 Kilo Guardian shutting down...")
+    
+    try:
+        if security_monitor:
+            security_monitor.stop_monitoring()
+    except:
+        pass
+    
+    try:
+        healer.stop_health_monitoring()
+    except:
+        pass
+    
+    try:
+        pm.stop_watchdog()
+    except:
+        pass
+    
+    logger.info("👋 Kilo Guardian shutdown complete")
+
+class ChatRequest(BaseModel): query: str
+
+@app.post("/api/chat", dependencies=[Depends(get_api_key)])
+async def chat(req: ChatRequest):
+    if "what went wrong" in req.query.lower() or "fix yourself" in req.query.lower():
+        diagnosis = healer.diagnose_last_error()
+        return {"answer": diagnosis}
+    # Wrap the standard chat in the monitor so it catches crashes.
+    # If the Reasoning Engine is offline or returns an error string, fall
+    # back to keyword-based plugin routing via PluginManager.get_action().
+    def _do_chat():
+        result = synthesize_answer(req.query, pm)
+
+        # If the reasoning engine returned a structured response (dict), return it.
+        if isinstance(result, dict):
+            return {"answer": result}
+
+        # If the reasoning engine returned a string error or a simple reply,
+        # try keyword routing when the engine reports an error or is unavailable.
+        if isinstance(result, str) and ("Error" in result or "Brain offline" in result or "not available" in result):
+            plugin = pm.get_action(req.query)
+            if plugin:
+                try:
+                    if hasattr(plugin, 'execute') and callable(plugin.execute):
+                        return {"answer": plugin.execute(req.query)}
+                    else:
+                        return {"answer": plugin.run(req.query)}
+                except Exception as e:
+                    healer.last_error = str(e)
+                    raise
+
+        # Default: return the string response from the reasoning engine.
+        return {"answer": result}
+
+    return healer.monitor(_do_chat)
+
+@app.get("/api/diagnostics", dependencies=[Depends(get_api_key)])
+def diag():
+    return {"status": "operational", "plugins": len(pm.plugins), "os_system": platform.system()}
+
+@app.get("/api/plugins", dependencies=[Depends(get_api_key)])
+def plugins():
+    plugins_out = []
+    for p in pm.plugins:
+        item = {
+            "name": p.get_name(),
+            "keywords": p.get_keywords(),
+            "description": ", ".join(p.get_keywords()),
+            "enabled": getattr(p, 'enabled', True)  # Default to enabled
+        }
+        # Include manifest if the plugin provided one
+        if hasattr(p, 'manifest'):
+            item['manifest'] = p.manifest
+        # Include last-known health if available
+        if hasattr(p, 'health_status'):
+            item['health'] = p.health_status
+        elif hasattr(p, 'health') and callable(p.health):
+            try:
+                item['health'] = p.health()
+            except Exception as e:
+                item['health'] = {"status": "error", "detail": str(e)}
+
+        plugins_out.append(item)
+
+    return {"plugins": plugins_out}
+
+@app.post("/api/plugins/{plugin_name}/toggle", dependencies=[Depends(get_api_key)])
+def toggle_plugin(plugin_name: str):
+    """Enable or disable a plugin. State persists across restarts."""
+    # Find the plugin
+    plugin = None
+    for p in pm.plugins:
+        if p.get_name() == plugin_name:
+            plugin = p
+            break
+    
+    if not plugin:
+        raise HTTPException(status_code=404, detail=f"Plugin '{plugin_name}' not found")
+    
+    # Toggle the enabled state
+    current_state = getattr(plugin, 'enabled', True)
+    new_state = not current_state
+    setattr(plugin, 'enabled', new_state)
+    
+    # Persist to file (store in plugin_states.json)
+    states_file = os.path.join(os.path.dirname(__file__), 'user_data', 'plugin_states.json')
+    os.makedirs(os.path.dirname(states_file), exist_ok=True)
+    
+    try:
+        if os.path.exists(states_file):
+            with open(states_file, 'r') as f:
+                states = json.load(f)
+        else:
+            states = {}
+        
+        states[plugin_name] = {'enabled': new_state, 'updated': datetime.now().isoformat()}
+        
+        with open(states_file, 'w') as f:
+            json.dump(states, f, indent=2)
+    except Exception as e:
+        logger.error(f"Failed to persist plugin state: {e}")
+    
+    logger.info(f"Plugin '{plugin_name}' {'enabled' if new_state else 'disabled'}")
+    return {
+        "plugin": plugin_name,
+        "enabled": new_state,
+        "message": f"Plugin {'enabled' if new_state else 'disabled'} successfully"
+    }
+
+@app.get("/wizard")
+def serve_wizard():
+    """Serve the setup wizard page"""
+    wizard_path = os.path.join(os.path.dirname(__file__), 'public', 'wizard.html')
+    if os.path.exists(wizard_path):
+        return FileResponse(wizard_path)
+    raise HTTPException(status_code=404, detail="Setup wizard not found")
+
+@app.get("/api/system/health", dependencies=[Depends(get_api_key)])
+def health_check():
+    """
+    Returns the Traffic Light status for the frontend.
+    """
+    cpu_usage = psutil.cpu_percent()
+    ram_usage = psutil.virtual_memory().percent
+    
+    # Check if plugins are alive
+    active_plugins = len([p for p in pm.plugins if hasattr(p, 'is_alive') and p.is_alive()])
+    total_plugins = len(pm.plugins)
+    
+    status = "GREEN"
+    message = "All Systems Nominal"
+
+    # YELLOW CONDITIONS (Working, but stressed)
+    if cpu_usage > 80 or ram_usage > 85:
+        status = "YELLOW"
+        message = "High System Load"
+    elif active_plugins < total_plugins:
+        status = "YELLOW"
+        message = "Some Plugins Offline"
+
+    # RED CONDITIONS (Critical Failure)
+    if cpu_usage > 95:
+        status = "RED"
+        message = "CRITICAL: CPU Overload"
+    # In production, check if the LLM API is reachable here too
+    
+    # Update Persona based on health (If system is RED, Kilo gets serious)
+    # persona.set_system_mood(status) # Persona is not imported
+    
+    return {
+        "status": status, # GREEN, YELLOW, RED
+        "message": message,
+        "cpu": cpu_usage,
+        "active_plugins": active_plugins
+    }
+
+class UserData(BaseModel):
+    name: str
+    aiName: str
+    interests: str
+    householdSize: int
+    location: dict
+    faceData: str # Base64 string
+
+@app.post("/api/setup/initialize", dependencies=[Depends(get_api_key)])
+async def initialize_setup(user_data: UserData):
+    sanitized_data = {
+        "name": "***", # Masking PII
+        "aiName": "***", # Masking PII
+        "interests": "***", # Masking PII
+        "householdSize": user_data.householdSize,
+        # 'location' and 'faceData' are omitted due to extreme sensitivity
+    }
+    logger.info(f"Received setup data (sanitized): {sanitized_data}")
+    # In a real application, you would save this data to a database
+    # or process it further. For now, just acknowledge.
+    
+    # Example: Save some data to config (simplified)
+    # This would require a more robust config management system
+    # config.set("user_name", user_data.name) 
+    # config.set("ai_name", user_data.aiName)
+
+    return {"message": "Setup data received and processed successfully!"}
+
+
+class PluginRestartRequest(BaseModel):
+    name: str
+
+
+@app.post("/api/plugins/restart", dependencies=[Depends(get_api_key)])
+def restart_plugin(req: PluginRestartRequest):
+    """Restart a plugin by name using the PluginManager restart logic."""
+    try:
+        plugin = pm.get_plugin(req.name)
+        if not plugin:
+            return {"ok": False, "error": "Plugin not found"}
+
+        pm.restart_plugin(plugin)
+        return {"ok": True, "message": f"Restarted plugin {req.name}"}
+    except Exception as e:
+        logger.exception(f"Failed to restart plugin {req.name}: {e}")
+        return {"ok": False, "error": str(e)}
+
+# --- CAMERA ENDPOINTS (CORE FEATURE) ---
+
+@app.get("/api/cameras")
+async def list_cameras():
+    """
+    List all detected cameras.
+    This is a core feature, always available.
+    """
+    if not camera_service:
+        return {"cameras": [], "error": "Camera service not initialized"}
+    
+    cameras = camera_service.get_all_cameras()
+    return {
+        "cameras": [
+            {
+                "id": info.id,
+                "name": info.name,
+                "is_active": info.is_active,
+                "resolution": info.resolution,
+                "fps": info.fps
+            }
+            for info in cameras.values()
+        ],
+        "count": len(cameras)
+    }
+
+def gen_camera_frames(camera_id: int):
+    """Generate MJPEG stream for a specific camera."""
+    logger.info(f"🎥 Starting camera stream for camera {camera_id}")
+    frame_count = 0
+    
+    while True:
+        try:
+            if not camera_service:
+                logger.warning("Camera service not available")
+                time.sleep(0.5)
+                continue
+            
+            frame = camera_service.get_frame(camera_id)
+            if frame:
+                frame_count += 1
+                if frame_count % 30 == 0:  # Log every 30 frames
+                    logger.debug(f"Camera {camera_id}: streamed {frame_count} frames")
+                yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+                time.sleep(0.1)  # ~10 FPS max
+            else:
+                # Camera unavailable, wait before retry
+                logger.warning(f"Camera {camera_id}: No frame available")
+                time.sleep(0.5)
+        except GeneratorExit:
+            logger.info(f"🎥 Camera {camera_id} stream closed by client")
+            break
+        except Exception as e:
+            logger.error(f"Error streaming camera {camera_id}: {e}")
+            time.sleep(1.0)
+
+@app.get("/api/camera/{camera_id}/stream")
+async def camera_stream(camera_id: int):
+    """
+    Stream MJPEG video from a specific camera.
+    This is a core feature for the security dashboard.
+    """
+    if not camera_service:
+        return Response(status_code=503, content="Camera service not available")
+    
+    info = camera_service.get_camera_info(camera_id)
+    if not info:
+        return Response(status_code=404, content=f"Camera {camera_id} not found")
+    
+    return StreamingResponse(
+        gen_camera_frames(camera_id),
+        media_type="multipart/x-mixed-replace; boundary=frame"
+    )
+
+@app.get("/api/camera/health")
+async def camera_health():
+    """Check camera service health."""
+    if not camera_service:
+        return {"status": "error", "message": "Camera service not initialized"}
+    
+    return camera_service.health_check()
+
+# --- STATIC FILE SERVER (Frontend) ---
+
+# Define the directory for the frontend files
+STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "public")
+
+# Check if the directory exists, if not, create it
+if not os.path.isdir(STATIC_DIR):
+    os.makedirs(STATIC_DIR, exist_ok=True)
+    logger.warning(f"Created missing static directory: {STATIC_DIR}")
+
+
+# Mount the static directory to serve files (like CSS, JS)
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+# Serve the main index.html file for the root path
+@app.get("/")
+async def root():
+    index_path = os.path.join(STATIC_DIR, "index.html")
+    if os.path.exists(index_path):
+        with open(index_path, 'r') as f:
+            return Response(content=f.read(), media_type="text/html")
+    else:
+        return {"message": "Welcome to Kilo. Frontend not built yet. Access /api/chat or /api/diagnostics directly."}
+
+# Serve the wizard page
+@app.get("/wizard")
+async def wizard_page():
+    wizard_path = os.path.join(STATIC_DIR, "wizard.html")
+    if os.path.exists(wizard_path):
+        return FileResponse(wizard_path)
+    else:
+        return {"error": "Wizard not found. Please ensure wizard.html is in the public directory."}
+
+# --- WIZARD API ENDPOINTS ---
+
+class WizardPersonal(BaseModel):
+    userName: str
+    preferredName: str
+    assistantName: str
+
+class WizardFace(BaseModel):
+    name: str
+    relation: str
+    image: str
+    timestamp: str
+
+class WizardNews(BaseModel):
+    topics: str
+    sources: List[str]
+    briefingTime: str
+
+class WizardLocation(BaseModel):
+    method: str
+    value: str
+
+class WizardOAuth(BaseModel):
+    connected: List[str]
+
+class WizardData(BaseModel):
+    personal: WizardPersonal
+    faces: List[WizardFace]
+    news: WizardNews
+    location: WizardLocation
+    oauth: WizardOAuth
+
+@app.post("/api/wizard/complete")
+async def complete_wizard(data: WizardData):
+    """
+    Save wizard configuration data.
+    This creates the user profile and initializes Kilo for this user.
+    """
+    try:
+        # Create user config directory
+        config_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "user_data")
+        os.makedirs(config_dir, exist_ok=True)
+        
+        # Save user preferences
+        prefs_file = os.path.join(config_dir, "preferences.json")
+        preferences = {
+            "personal": {
+                "userName": data.personal.userName,
+                "preferredName": data.personal.preferredName,
+                "assistantName": data.personal.assistantName
+            },
+            "news": {
+                "topics": data.news.topics,
+                "sources": data.news.sources,
+                "briefingTime": data.news.briefingTime
+            },
+            "location": {
+                "method": data.location.method,
+                "value": data.location.value
+            },
+            "oauth": {
+                "connected": data.oauth.connected
+            },
+            "setup_completed": True,
+            "setup_date": datetime.now().isoformat()
+        }
+        
+        with open(prefs_file, 'w') as f:
+            json.dump(preferences, f, indent=2)
+        
+        # Save face data separately (more secure)
+        faces_file = os.path.join(config_dir, "faces.json")
+        faces_data = {
+            "faces": [
+                {
+                    "name": face.name,
+                    "relation": face.relation,
+                    "image": face.image,
+                    "timestamp": face.timestamp
+                }
+                for face in data.faces
+            ],
+            "count": len(data.faces)
+        }
+        
+        with open(faces_file, 'w') as f:
+            json.dump(faces_data, f, indent=2)
+        
+        logger.info(f"✅ Wizard completed for user: {data.personal.userName}")
+        logger.info(f"   - Faces registered: {len(data.faces)}")
+        logger.info(f"   - Location: {data.location.value}")
+        logger.info(f"   - OAuth services: {', '.join(data.oauth.connected) if data.oauth.connected else 'None'}")
+        
+        return {
+            "success": True,
+            "message": "Setup completed successfully!",
+            "user": data.personal.preferredName or data.personal.userName
+        }
+    
+    except Exception as e:
+        logger.exception(f"Error saving wizard data: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to save preferences: {str(e)}")
+
+@app.get("/api/wizard/status")
+async def wizard_status():
+    """Check if wizard has been completed."""
+    try:
+        config_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "user_data")
+        prefs_file = os.path.join(config_dir, "preferences.json")
+        
+        if os.path.exists(prefs_file):
+            with open(prefs_file, 'r') as f:
+                prefs = json.load(f)
+                return {
+                    "completed": prefs.get("setup_completed", False),
+                    "user": prefs.get("personal", {}).get("preferredName", "User"),
+                    "setupDate": prefs.get("setup_date")
+                }
+        
+        return {"completed": False}
+    
+    except Exception as e:
+        logger.error(f"Error checking wizard status: {e}")
+        return {"completed": False}
+
+# --- STORED FACES API ---
+
+@app.get("/api/faces")
+async def get_stored_faces():
+    """Get all stored face data."""
+    try:
+        config_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "user_data")
+        faces_file = os.path.join(config_dir, "faces.json")
+        
+        if os.path.exists(faces_file):
+            with open(faces_file, 'r') as f:
+                return json.load(f)
+        
+        return {"faces": [], "count": 0}
+    
+    except Exception as e:
+        logger.error(f"Error loading faces: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# --- SYSTEM LOGS API ---
+
+@app.get("/api/logs")
+async def get_system_logs(lines: int = 100):
+    """Get recent system logs."""
+    try:
+        log_file = "server.log"
+        if os.path.exists(log_file):
+            with open(log_file, 'r') as f:
+                all_lines = f.readlines()
+                recent_lines = all_lines[-lines:]
+                return {
+                    "logs": recent_lines,
+                    "total": len(all_lines),
+                    "showing": len(recent_lines)
+                }
+        
+        return {"logs": [], "total": 0, "showing": 0}
+    
+    except Exception as e:
+        logger.error(f"Error reading logs: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# --- SECURITY ALERTS API ---
+
+@app.get("/api/alerts")
+async def get_security_alerts():
+    """Get security alerts and threats."""
+    try:
+        # TODO: Implement real threat detection system
+        # For now, return placeholder
+        return {
+            "alerts": [],
+            "threats": 0,
+            "status": "all_clear",
+            "last_check": datetime.now().isoformat()
+        }
+    
+    except Exception as e:
+        logger.error(f"Error getting alerts: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# --- SYSTEM CONTROL API ---
+
+@app.post("/api/restart")
+async def restart_system():
+    """Restart the Kilo Guardian system."""
+    try:
+        logger.info("🔄 System restart requested via API")
+        # In production, this would trigger a proper restart
+        return {"success": True, "message": "System restart initiated"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/shutdown")
+async def shutdown_system():
+    """Shutdown the Kilo Guardian system."""
+    try:
+        logger.info("⚠️ System shutdown requested via API")
+        # In production, this would trigger a proper shutdown
+        return {"success": True, "message": "System shutdown initiated"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- Banking CSV Upload Endpoint ---
+
+@app.post("/api/upload/banking-csv", dependencies=[Depends(get_api_key)])
+async def upload_banking_csv(file: UploadFile = File(...)):
+    """Upload and process a banking CSV file."""
+    try:
+        # Validate file type
+        if not file.filename.endswith('.csv'):
+            raise HTTPException(status_code=400, detail="Only CSV files are supported")
+        
+        # Read CSV content
+        content = await file.read()
+        csv_text = content.decode('utf-8')
+        
+        # Parse CSV
+        csv_reader = csv.DictReader(StringIO(csv_text))
+        transactions = list(csv_reader)
+        
+        logger.info(f"📊 Banking CSV uploaded: {file.filename} ({len(transactions)} transactions)")
+        
+        # Store or process transactions (implement based on your needs)
+        # For now, just return summary
+        
+        total_debits = sum(float(row.get('Amount', 0)) for row in transactions if float(row.get('Amount', 0)) < 0)
+        total_credits = sum(float(row.get('Amount', 0)) for row in transactions if float(row.get('Amount', 0)) > 0)
+        
+        return {
+            "success": True,
+            "filename": file.filename,
+            "transactions_count": len(transactions),
+            "summary": {
+                "total_debits": abs(total_debits),
+                "total_credits": total_credits,
+                "net": total_credits + total_debits
+            },
+            "message": "CSV processed successfully. Integrate with finance_manager plugin for full analysis."
+        }
+    except Exception as e:
+        logger.error(f"Error processing banking CSV: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/upload/financial-document", dependencies=[Depends(get_api_key)])
+async def upload_financial_document(file: UploadFile = File(...), type: str = "document"):
+    """Upload and process financial documents (CSV, receipts, bills, etc.)."""
+    try:
+        # Get file extension
+        filename = file.filename.lower()
+        ext = os.path.splitext(filename)[1]
+        
+        # Read content
+        content = await file.read()
+        
+        logger.info(f"📄 Financial document uploaded: {file.filename} (type: {type}, size: {len(content)} bytes)")
+        
+        result = {
+            "success": True,
+            "filename": file.filename,
+            "type": type,
+            "size": len(content),
+            "message": f"{type.capitalize()} uploaded successfully"
+        }
+        
+        # Type-specific processing
+        if type == "csv" and ext == ".csv":
+            csv_text = content.decode('utf-8')
+            csv_reader = csv.DictReader(StringIO(csv_text))
+            transactions = list(csv_reader)
+            
+            total_debits = sum(float(row.get('Amount', 0)) for row in transactions if float(row.get('Amount', 0)) < 0)
+            total_credits = sum(float(row.get('Amount', 0)) for row in transactions if float(row.get('Amount', 0)) > 0)
+            
+            result["transactions_count"] = len(transactions)
+            result["summary"] = {
+                "total_debits": abs(total_debits),
+                "total_credits": total_credits,
+                "net": total_credits + total_debits
+            }
+            result["message"] = f"CSV processed: {len(transactions)} transactions found"
+        
+        elif type in ["receipt", "bill"] and ext in [".pdf", ".jpg", ".jpeg", ".png"]:
+            result["message"] = f"{type.capitalize()} received. OCR processing available via finance_manager plugin."
+        
+        elif type == "document":
+            result["message"] = f"Document received. Processing available via finance_manager plugin."
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error processing financial document: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- Sandbox Management Endpoints ---
+
+@app.get("/api/sandbox/health")
+async def get_sandbox_health():
+    """Get health report for all sandboxed plugins."""
+    try:
+        from plugin_sandbox import get_sandbox_manager
+        
+        manager = get_sandbox_manager()
+        if not manager:
+            return {
+                "error": "Sandbox not available",
+                "sandbox_enabled": False
+            }
+        
+        report = manager.get_health_report()
+        return report
+    except Exception as e:
+        logger.error(f"Error getting sandbox health: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/sandbox/reset/{plugin_name}")
+async def reset_plugin_health(plugin_name: str):
+    """Reset health status for a specific plugin."""
+    try:
+        from plugin_sandbox import get_sandbox_manager
+        
+        manager = get_sandbox_manager()
+        if not manager:
+            raise HTTPException(status_code=503, detail="Sandbox not available")
+        
+        success = manager.reset_plugin_health(plugin_name)
+        
+        if success:
+            return {
+                "success": True,
+                "plugin": plugin_name,
+                "message": "Health status reset"
+            }
+        else:
+            raise HTTPException(status_code=404, detail=f"Plugin '{plugin_name}' not found in sandbox")
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error resetting plugin health: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- Security Monitor Endpoints ---
+
+@app.get("/api/security/status")
+async def get_security_status():
+    """Get current security monitor status."""
+    try:
+        from security_monitor import get_security_monitor
+        
+        monitor = get_security_monitor()
+        status = monitor.get_status()
+        return status
+    except Exception as e:
+        logger.error(f"Error getting security status: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/security/events")
+async def get_security_events(severity: Optional[str] = None, limit: int = 100):
+    """Get security events, optionally filtered by severity."""
+    try:
+        from security_monitor import get_security_monitor
+        
+        monitor = get_security_monitor()
+        events = monitor.get_events(severity=severity, limit=limit)
+        return {"events": events, "total": len(events)}
+    except Exception as e:
+        logger.error(f"Error getting security events: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/security/baseline")
+async def create_security_baseline():
+    """Create file integrity baseline."""
+    try:
+        from security_monitor import get_security_monitor
+        
+        monitor = get_security_monitor()
+        success = monitor.create_baseline()
+        
+        if success:
+            return {"success": True, "message": "Integrity baseline created"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to create baseline")
+    except Exception as e:
+        logger.error(f"Error creating baseline: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class SecurityModeRequest(BaseModel):
+    mode: str
+
+
+@app.post("/api/security/mode")
+async def set_security_mode(request: SecurityModeRequest):
+    """Set security response mode (watch, alert, lockdown, wipe, snoop, defend)."""
+    try:
+        from security_monitor import get_security_monitor
+        
+        monitor = get_security_monitor()
+        monitor.set_response_mode(request.mode)
+        
+        return {
+            "success": True,
+            "mode": request.mode,
+            "message": f"Security mode set to: {request.mode}"
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error setting security mode: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/security/start")
+async def start_security_monitoring():
+    """Start security monitoring."""
+    try:
+        from security_monitor import get_security_monitor
+        
+        monitor = get_security_monitor()
+        success = monitor.start_monitoring()
+        
+        if success:
+            return {"success": True, "message": "Security monitoring started"}
+        else:
+            return {"success": False, "message": "Security monitoring already running"}
+    except Exception as e:
+        logger.error(f"Error starting security monitoring: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/security/stop")
+async def stop_security_monitoring():
+    """Stop security monitoring."""
+    try:
+        from security_monitor import get_security_monitor
+        
+        monitor = get_security_monitor()
+        success = monitor.stop_monitoring()
+        
+        if success:
+            return {"success": True, "message": "Security monitoring stopped"}
+        else:
+            return {"success": False, "message": "Security monitoring not running"}
+    except Exception as e:
+        logger.error(f"Error stopping security monitoring: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/security/reset-baseline", dependencies=[Depends(get_api_key)])
+async def reset_security_baseline():
+    """
+    Regenerate the file integrity baseline with current file states.
+    Use this after making legitimate code changes to stop tampering alerts.
+    
+    ⚠️ DEVELOPMENT ONLY ⚠️
+    This endpoint is automatically disabled in production (when ENV != 'development').
+    In production, file changes are security incidents and should NEVER be
+    trusted by resetting the baseline.
+    """
+    # Block this endpoint in production
+    env = os.getenv('KILO_ENV', 'production').lower()
+    if env != 'development':
+        logger.warning(f"⚠️ Attempted to reset baseline in {env} environment - BLOCKED")
+        raise HTTPException(
+            status_code=403, 
+            detail="Baseline reset is disabled in production for security. File tampering alerts indicate real security incidents."
+        )
+    
+    try:
+        from security_monitor import get_security_monitor
+        
+        monitor = get_security_monitor()
+        success = monitor.create_baseline()
+        
+        if success:
+            logger.info("✅ Security baseline regenerated successfully (development mode)")
+            return {
+                "success": True,
+                "message": "Security baseline regenerated. Current file states are now trusted.",
+                "timestamp": datetime.now().isoformat(),
+                "environment": "development"
+            }
+        else:
+            return {
+                "success": False,
+                "message": "Failed to regenerate baseline"
+            }
+    except Exception as e:
+        logger.error(f"Error resetting baseline: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class UnlockRequest(BaseModel):
+    confirmation_code: str
+
+
+@app.post("/api/security/unlock")
+async def unlock_system(request: UnlockRequest):
+    """Unlock system after lockdown."""
+    try:
+        from security_monitor import get_security_monitor
+        
+        monitor = get_security_monitor()
+        success = monitor.unlock_system(request.confirmation_code)
+        
+        if success:
+            return {"success": True, "message": "System unlocked"}
+        else:
+            raise HTTPException(status_code=403, detail="Invalid unlock code")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error unlocking system: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- Self-Healer Endpoints ---
+
+@app.get("/api/healer/status")
+async def get_healer_status():
+    """Get self-healer status."""
+    try:
+        status = healer.get_status()
+        return status
+    except Exception as e:
+        logger.error(f"Error getting healer status: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/healer/recover")
+async def trigger_recovery():
+    """Trigger automatic recovery from last error."""
+    try:
+        result = healer.attempt_recovery(auto_only=False)
+        return result
+    except Exception as e:
+        logger.error(f"Error triggering recovery: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class RecoveryActionRequest(BaseModel):
+    action_name: str
+
+
+@app.post("/api/healer/action")
+async def execute_recovery_action(request: RecoveryActionRequest):
+    """Execute a specific recovery action."""
+    try:
+        success = healer.execute_recovery_action(request.action_name)
+        
+        if success:
+            return {
+                "success": True,
+                "action": request.action_name,
+                "message": "Recovery action executed successfully"
+            }
+        else:
+            raise HTTPException(status_code=404, detail=f"Recovery action '{request.action_name}' not found or failed")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error executing recovery action: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/healer/diagnosis")
+async def get_diagnosis():
+    """Get diagnosis of last error."""
+    try:
+        diagnosis = healer.diagnose_last_error()
+        return {"diagnosis": diagnosis}
+    except Exception as e:
+        logger.error(f"Error getting diagnosis: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== ATTACK MONITORING API ====================
+
+from security_monitor import attack_logger, honeypot_manager, quiet_agent, get_security_monitor
+from network_honeypot import start_network_honeypot, stop_network_honeypot
+
+
+@app.get("/api/security/alerts")
+async def get_security_alerts():
+    """Get active security alerts for user notification"""
+    try:
+        active_alerts = attack_logger.get_active_alerts()
+        return {
+            "alerts": active_alerts,
+            "count": len(active_alerts)
+        }
+    except Exception as e:
+        logger.error(f"Error getting security alerts: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/security/alerts/{alert_id}/dismiss")
+async def dismiss_security_alert(alert_id: str):
+    """Dismiss a security alert"""
+    try:
+        success = attack_logger.dismiss_alert(alert_id)
+        if success:
+            return {"success": True, "message": "Alert dismissed"}
+        else:
+            raise HTTPException(status_code=404, detail="Alert not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error dismissing alert: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/security/attacks")
+async def get_recent_attacks():
+    """Get recent attack statistics"""
+    try:
+        recent = attack_logger.get_recent_attacks(minutes=60)
+        stats = attack_logger.get_attack_stats()
+        
+        return {
+            "recent_attacks": recent,
+            "statistics": stats,
+            "blocked_ips": list(attack_logger.blocked_ips)
+        }
+    except Exception as e:
+        logger.error(f"Error getting attack stats: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/security/honeypots")
+async def get_honeypot_stats():
+    """Get honeypot trap statistics"""
+    try:
+        stats = honeypot_manager.get_stats()
+        return stats
+    except Exception as e:
+        logger.error(f"Error getting honeypot stats: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+class MountDeployRequest(BaseModel):
+    extra_paths: List[str] | None = None
+
+@app.post("/api/security/honeypots/deploy_mounts")
+async def deploy_mount_honeypots(request: MountDeployRequest):
+    """Deploy honeypot traps to writable mounted volumes (/mnt, /media, plus optional paths)."""
+    try:
+        result = honeypot_manager.deploy_to_mounts(request.extra_paths or [])
+        return {"success": True, "result": result}
+    except Exception as e:
+        logger.error(f"Error deploying mount honeypots: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/security/network_honeypot/start")
+async def start_network_decoy():
+    """Start the network honeypot decoy service if enabled."""
+    try:
+        from config import ENABLE_NETWORK_HONEYPOT, NETWORK_HONEYPOT_PORT
+        if not ENABLE_NETWORK_HONEYPOT:
+            raise HTTPException(status_code=400, detail="Network honeypot disabled by config")
+        ok = start_network_honeypot(NETWORK_HONEYPOT_PORT)
+        if not ok:
+            raise HTTPException(status_code=500, detail="Failed to start honeypot")
+        return {"success": True, "port": NETWORK_HONEYPOT_PORT}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error starting network honeypot: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/security/network_honeypot/stop")
+async def stop_network_decoy():
+    """Stop the network honeypot decoy service."""
+    try:
+        ok = stop_network_honeypot()
+        return {"success": ok}
+    except Exception as e:
+        logger.error(f"Error stopping network honeypot: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==========================
+# VPN MANAGEMENT ENDPOINTS
+# ==========================
+
+@app.get("/api/vpn/server/status", dependencies=[Depends(get_api_key)])
+async def vpn_server_status():
+    """Get VPN server status"""
+    try:
+        vpn_server = pm.get_plugin_by_name("vpn_server")
+        if not vpn_server:
+            return {"success": False, "error": "VPN server plugin not loaded"}
+        return vpn_server.get_status()
+    except Exception as e:
+        logger.error(f"Error getting VPN server status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/vpn/server/setup", dependencies=[Depends(get_api_key)])
+async def vpn_server_setup():
+    """Initialize VPN server"""
+    try:
+        vpn_server = pm.get_plugin_by_name("vpn_server")
+        if not vpn_server:
+            raise HTTPException(status_code=404, detail="VPN server plugin not loaded")
+        return vpn_server.setup_server()
+    except Exception as e:
+        logger.error(f"Error setting up VPN server: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+class AddPeerRequest(BaseModel):
+    name: str
+    email: Optional[str] = ""
+
+@app.post("/api/vpn/server/peers", dependencies=[Depends(get_api_key)])
+async def vpn_add_peer(request: AddPeerRequest):
+    """Add new VPN peer"""
+    try:
+        vpn_server = pm.get_plugin_by_name("vpn_server")
+        if not vpn_server:
+            raise HTTPException(status_code=404, detail="VPN server plugin not loaded")
+        return vpn_server.add_peer(request.name, request.email)
+    except Exception as e:
+        logger.error(f"Error adding VPN peer: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/vpn/server/peers", dependencies=[Depends(get_api_key)])
+async def vpn_list_peers():
+    """List all VPN peers"""
+    try:
+        vpn_server = pm.get_plugin_by_name("vpn_server")
+        if not vpn_server:
+            raise HTTPException(status_code=404, detail="VPN server plugin not loaded")
+        return vpn_server.list_peers()
+    except Exception as e:
+        logger.error(f"Error listing VPN peers: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/vpn/server/peers/{public_key}", dependencies=[Depends(get_api_key)])
+async def vpn_remove_peer(public_key: str):
+    """Remove VPN peer"""
+    try:
+        vpn_server = pm.get_plugin_by_name("vpn_server")
+        if not vpn_server:
+            raise HTTPException(status_code=404, detail="VPN server plugin not loaded")
+        return vpn_server.remove_peer(public_key)
+    except Exception as e:
+        logger.error(f"Error removing VPN peer: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# VPN Client endpoints
+@app.get("/api/vpn/client/status", dependencies=[Depends(get_api_key)])
+async def vpn_client_status():
+    """Get VPN client connection status"""
+    try:
+        vpn_client = pm.get_plugin_by_name("vpn_client")
+        if not vpn_client:
+            return {"success": False, "error": "VPN client plugin not loaded"}
+        return vpn_client.get_status()
+    except Exception as e:
+        logger.error(f"Error getting VPN client status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+class AddVPNProfileRequest(BaseModel):
+    name: str
+    type: str  # 'wireguard' or 'openvpn'
+    config: str
+
+@app.post("/api/vpn/client/profiles", dependencies=[Depends(get_api_key)])
+async def vpn_add_profile(request: AddVPNProfileRequest):
+    """Add VPN profile"""
+    try:
+        vpn_client = pm.get_plugin_by_name("vpn_client")
+        if not vpn_client:
+            raise HTTPException(status_code=404, detail="VPN client plugin not loaded")
+        
+        if request.type == "wireguard":
+            return vpn_client.add_wireguard_profile(request.name, request.config)
+        elif request.type == "openvpn":
+            return vpn_client.add_openvpn_profile(request.name, request.config)
+        else:
+            raise HTTPException(status_code=400, detail=f"Unsupported VPN type: {request.type}")
+    except Exception as e:
+        logger.error(f"Error adding VPN profile: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/vpn/client/profiles", dependencies=[Depends(get_api_key)])
+async def vpn_list_profiles():
+    """List VPN profiles"""
+    try:
+        vpn_client = pm.get_plugin_by_name("vpn_client")
+        if not vpn_client:
+            raise HTTPException(status_code=404, detail="VPN client plugin not loaded")
+        return vpn_client.list_profiles()
+    except Exception as e:
+        logger.error(f"Error listing VPN profiles: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/vpn/client/connect/{profile_name}", dependencies=[Depends(get_api_key)])
+async def vpn_connect(profile_name: str):
+    """Connect to VPN"""
+    try:
+        vpn_client = pm.get_plugin_by_name("vpn_client")
+        if not vpn_client:
+            raise HTTPException(status_code=404, detail="VPN client plugin not loaded")
+        return vpn_client.connect(profile_name)
+    except Exception as e:
+        logger.error(f"Error connecting to VPN: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/vpn/client/disconnect", dependencies=[Depends(get_api_key)])
+async def vpn_disconnect():
+    """Disconnect from VPN"""
+    try:
+        vpn_client = pm.get_plugin_by_name("vpn_client")
+        if not vpn_client:
+            raise HTTPException(status_code=404, detail="VPN client plugin not loaded")
+        return vpn_client.disconnect()
+    except Exception as e:
+        logger.error(f"Error disconnecting from VPN: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/vpn/client/profiles/{profile_name}", dependencies=[Depends(get_api_key)])
+async def vpn_remove_profile(profile_name: str):
+    """Remove VPN profile"""
+    try:
+        vpn_client = pm.get_plugin_by_name("vpn_client")
+        if not vpn_client:
+            raise HTTPException(status_code=404, detail="VPN client plugin not loaded")
+        return vpn_client.remove_profile(profile_name)
+    except Exception as e:
+        logger.error(f"Error removing VPN profile: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# VPS Bridge endpoints
+@app.get("/api/vps/bridge/status", dependencies=[Depends(get_api_key)])
+async def vps_bridge_status():
+    """Get VPS bridge status"""
+    try:
+        from vps_bridge import get_bridge_status
+        return get_bridge_status()
+    except Exception as e:
+        logger.error(f"Error getting VPS bridge status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==========================
+# LICENSE & BILLING ENDPOINTS
+# ==========================
+
+@app.get("/api/license/status", dependencies=[Depends(get_api_key)])
+async def get_license_status():
+    """Get current license status and tier"""
+    try:
+        from license_manager import get_license_manager
+        license_mgr = get_license_manager()
+        return license_mgr.get_usage_stats()
+    except Exception as e:
+        logger.error(f"Error getting license status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+class ActivateLicenseRequest(BaseModel):
+    license_key: str
+    bastion_id: str
+
+@app.post("/api/license/activate", dependencies=[Depends(get_api_key)])
+async def activate_license(request: ActivateLicenseRequest):
+    """Activate a license key"""
+    try:
+        from license_manager import get_license_manager
+        license_mgr = get_license_manager()
+        return license_mgr.activate_license(request.license_key, request.bastion_id)
+    except Exception as e:
+        logger.error(f"Error activating license: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/license/upgrade-info", dependencies=[Depends(get_api_key)])
+async def get_upgrade_info():
+    """Get upgrade information for current tier"""
+    try:
+        from license_manager import get_license_manager
+        license_mgr = get_license_manager()
+        return license_mgr.get_upgrade_info()
+    except Exception as e:
+        logger.error(f"Error getting upgrade info: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/usage/stats", dependencies=[Depends(get_api_key)])
+async def get_usage_stats():
+    """Get usage statistics"""
+    try:
+        from usage_tracker import get_usage_tracker
+        tracker = get_usage_tracker()
+        return tracker.get_current_usage()
+    except Exception as e:
+        logger.error(f"Error getting usage stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/usage/daily", dependencies=[Depends(get_api_key)])
+async def get_daily_usage(days: int = 30):
+    """Get daily usage statistics"""
+    try:
+        from usage_tracker import get_usage_tracker
+        tracker = get_usage_tracker()
+        return tracker.get_daily_stats(days)
+    except Exception as e:
+        logger.error(f"Error getting daily usage: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/usage/monthly", dependencies=[Depends(get_api_key)])
+async def get_monthly_usage(months: int = 12):
+    """Get monthly usage statistics"""
+    try:
+        from usage_tracker import get_usage_tracker
+        tracker = get_usage_tracker()
+        return tracker.get_monthly_stats(months)
+    except Exception as e:
+        logger.error(f"Error getting monthly usage: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/billing/summary", dependencies=[Depends(get_api_key)])
+async def get_billing_summary():
+    """Get billing summary for current period"""
+    try:
+        from usage_tracker import get_usage_tracker
+        tracker = get_usage_tracker()
+        return tracker.get_billing_summary()
+    except Exception as e:
+        logger.error(f"Error getting billing summary: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/webhooks/stripe")
+async def stripe_webhook(request: Request):
+    """Handle Stripe webhook events (NO API key required for webhooks)"""
+    try:
+        from payment_handler import StripeWebhookHandler
+        from . import config
+        
+        # Get raw body
+        payload = await request.body()
+        signature = request.headers.get('stripe-signature', '')
+        
+        # Initialize webhook handler
+        handler = StripeWebhookHandler(webhook_secret=getattr(config, 'STRIPE_WEBHOOK_SECRET', ''))
+        
+        # Verify signature
+        if not handler.verify_signature(payload, signature, str(int(time.time()))):
+            raise HTTPException(status_code=401, detail="Invalid signature")
+        
+        # Parse event
+        event_data = json.loads(payload)
+        event_type = event_data.get('type')
+        
+        # Handle event
+        result = handler.handle_webhook(event_type, event_data.get('data', {}))
+        
+        return result
+        
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+    except Exception as e:
+        logger.error(f"Webhook error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/security/observations")
+async def get_quiet_observations():
+    """Get quiet agent observations (admin only)"""
+    try:
+        observations = quiet_agent.get_observations(hours=24)
+        patterns = quiet_agent.analyze_patterns()
+        
+        return {
+            "observations": observations[-100:],  # Last 100
+            "patterns": patterns
+        }
+    except Exception as e:
+        logger.error(f"Error getting observations: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ================================================================
+
+

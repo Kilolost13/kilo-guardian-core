@@ -1,0 +1,65 @@
+/* The Main Container with Zombie Green Glow */
+.kilo-interface-container {
+    width: 900px;
+    height: 600px;
+    background-color: #000;
+    border: 2px solid var(--kilo-zombie-green);
+    /* THIS IS THE GLOW YOU ASKED FOR */
+    box-shadow: 0 0 20px var(--kilo-zombie-green), inset 0 0 10px var(--kilo-zombie-green);
+    border-radius: 10px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Status Lights Container */
+.status-panel {
+    display: flex;
+    gap: 15px;
+    padding: 10px;
+    background: #111;
+    border-bottom: 1px solid var(--kilo-zombie-green);
+    justify-content: center;
+}
+
+/* The actual lights */
+.light {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: #333; /* Off state */
+    border: 1px solid #555;
+    transition: all 0.3s ease;
+}
+
+/* Active States */
+.light.red.active {
+    background-color: var(--kilo-red);
+    box-shadow: 0 0 15px var(--kilo-red);
+    animation: pulse-red 1s infinite;
+}
+
+.light.yellow.active {
+    background-color: var(--kilo-yellow);
+    box-shadow: 0 0 15px var(--kilo-yellow);
+}
+
+.light.green.active {
+    background-color: var(--kilo-zombie-green);
+    box-shadow: 0 0 15px var(--kilo-zombie-green);
+}
+
+@keyframes pulse-red {
+    0% { opacity: 0.5; }
+    50% { opacity: 1; }
+    100% { opacity: 0.5; }
+}
+
+.blink {
+    animation: blinker 1s linear infinite;
+}
+
+@keyframes blinker {
+    50% { opacity: 0; }
+}

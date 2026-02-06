@@ -1,0 +1,25 @@
+# Production requirements (minimal, pinned)
+# Upgraded FastAPI to a currently supported release (compatible with Python 3.13+ and Pydantic v2).
+fastapi==0.115.6
+uvicorn[standard]==0.30.6
+pydantic==2.12.5
+gunicorn==21.2.0
+requests==2.32.3
+python-multipart==0.0.9
+psutil==5.9.5
+cryptography==42.0.8
+opencv-python==4.10.0.84
+jsonschema==4.25.1
+SQLAlchemy==2.0.44
+
+# VPN/VPS dependencies
+qrcode==7.4.2
+pillow>=10.0.0
+aiohttp==3.9.1
+
+# Payment processing
+stripe==7.8.0
+
+# Briefing plugin dependencies
+feedparser==6.0.11
+apscheduler==3.10.4

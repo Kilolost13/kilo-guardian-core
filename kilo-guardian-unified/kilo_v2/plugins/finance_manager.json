@@ -1,0 +1,6 @@
+{
+  "name": "finance_manager",
+  "version": "1.0.0",
+  "description": "Comprehensive financial management plugin for tracking spending, budgets, goals, and providing financial advice",
+  "isolate": true
+}

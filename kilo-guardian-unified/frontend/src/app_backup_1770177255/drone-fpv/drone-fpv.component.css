@@ -1,0 +1,544 @@
+/* Steampunk + Zombie Green Theme */
+.fpv-container {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+    font-family: 'Courier New', monospace;
+    overflow: hidden;
+}
+
+/* === FPV View === */
+.fpv-view {
+    position: relative;
+    width: 100%;
+    flex: 1;
+    background: #000;
+    border: 3px solid #00ff41;
+    border-radius: 8px;
+    margin: 10px;
+    box-shadow:
+        0 0 20px rgba(0, 255, 65, 0.3),
+        inset 0 0 30px rgba(0, 0, 0, 0.8);
+    overflow: hidden;
+}
+
+.video-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #000;
+}
+
+.hud-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* Connection Status */
+.connection-status {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(0, 0, 0, 0.7);
+    border: 2px solid #666;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #666;
+    z-index: 20;
+}
+
+.connection-status.connected {
+    border-color: #00ff41;
+    color: #00ff41;
+    box-shadow: 0 0 15px rgba(0, 255, 65, 0.5);
+}
+
+.connection-status.partial {
+    border-color: #ffaa00;
+    color: #ffaa00;
+    animation: pulse 1.5s infinite;
+}
+
+.connection-status.disconnected {
+    border-color: #ff0000;
+    color: #ff0000;
+}
+
+.status-icon {
+    font-size: 18px;
+}
+
+/* === Control Panel === */
+.control-panel {
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    gap: 20px;
+    padding: 20px;
+    background: linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%);
+    border-top: 3px solid #00ff41;
+    box-shadow: 0 -5px 30px rgba(0, 255, 65, 0.2);
+    min-height: 180px;
+}
+
+/* Quick Actions */
+.quick-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 150px;
+}
+
+.steampunk-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+    border: 2px solid #00ff41;
+    border-radius: 6px;
+    color: #00ff41;
+    font-size: 14px;
+    font-weight: bold;
+    font-family: 'Courier New', monospace;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow:
+        0 4px 8px rgba(0, 0, 0, 0.3),
+        0 0 10px rgba(0, 255, 65, 0.2);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.steampunk-button:hover:not(:disabled) {
+    background: linear-gradient(145deg, #3a3a3a, #2a2a2a);
+    box-shadow:
+        0 6px 12px rgba(0, 0, 0, 0.4),
+        0 0 20px rgba(0, 255, 65, 0.4);
+    transform: translateY(-2px);
+}
+
+.steampunk-button:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow:
+        0 2px 4px rgba(0, 0, 0, 0.3),
+        0 0 15px rgba(0, 255, 65, 0.3);
+}
+
+.steampunk-button:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    border-color: #444;
+    color: #444;
+}
+
+.steampunk-button.danger {
+    border-color: #ff0000;
+    color: #ff0000;
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.2);
+}
+
+.steampunk-button.warning {
+    border-color: #ffaa00;
+    color: #ffaa00;
+    box-shadow: 0 0 10px rgba(255, 170, 0, 0.2);
+}
+
+.steampunk-button.success {
+    border-color: #00ff41;
+    color: #00ff41;
+    box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+}
+
+.button-icon {
+    font-size: 18px;
+}
+
+/* === Control Mode Switch === */
+.control-mode-switch {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+.mode-toggle {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 2px solid #00ff41;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+    width: 100%;
+    max-width: 800px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.mode-toggle:hover {
+    box-shadow: 0 0 30px rgba(0, 255, 65, 0.5);
+}
+
+.mode-option {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 15px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    opacity: 0.5;
+}
+
+.mode-option.active {
+    opacity: 1;
+    background: rgba(0, 255, 65, 0.1);
+}
+
+.mode-icon {
+    font-size: 36px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.peripheral-name {
+    font-size: 10px;
+    color: #00ff41;
+    text-align: center;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ai-icon.glow,
+.ai-text.glow {
+    animation: zombie-glow 1.5s infinite;
+    text-shadow: 0 0 15px #00ff41;
+}
+
+@keyframes zombie-glow {
+
+    0%,
+    100% {
+        text-shadow: 0 0 10px #00ff41;
+    }
+
+    50% {
+        text-shadow: 0 0 25px #00ff41, 0 0 35px #00ff41;
+    }
+}
+
+.mode-label {
+    font-size: 16px;
+    font-weight: bold;
+    color: #00ff41;
+    letter-spacing: 2px;
+}
+
+/* Switch Slider */
+.switch-slider {
+    position: relative;
+    width: 80px;
+    height: 40px;
+    background: #1a1a1a;
+    border: 2px solid #00ff41;
+    border-radius: 20px;
+    transition: all 0.3s ease;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.slider-handle {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(145deg, #00ff41, #00cc33);
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 255, 65, 0.5);
+}
+
+.switch-slider.ai-mode .slider-handle {
+    transform: translateX(40px);
+}
+
+/* Manual Control Buttons */
+.enable-control-btn {
+    margin-top: 10px;
+    padding: 8px 16px;
+    background: linear-gradient(145deg, #00cc33, #00ff41);
+    border: 2px solid #00ff41;
+    border-radius: 6px;
+    color: #000;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+}
+
+.enable-control-btn:hover {
+    box-shadow: 0 0 20px rgba(0, 255, 65, 0.8);
+    transform: scale(1.05);
+}
+
+.control-active-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 8px 16px;
+    background: rgba(0, 255, 65, 0.2);
+    border: 2px solid #00ff41;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: bold;
+    color: #00ff41;
+}
+
+.pulse-dot {
+    width: 8px;
+    height: 8px;
+    background: #00ff41;
+    border-radius: 50%;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.5;
+        transform: scale(1.2);
+    }
+}
+
+/* Map Icon Button */
+.map-icon-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 10px 20px;
+    background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+    border: 2px solid #00ff41;
+    border-radius: 8px;
+    color: #00ff41;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+}
+
+.map-icon-btn:hover {
+    box-shadow: 0 0 20px rgba(0, 255, 65, 0.6);
+    transform: scale(1.05);
+}
+
+.map-icon-btn.glow {
+    animation: zombie-glow 1.5s infinite;
+    background: rgba(0, 255, 65, 0.2);
+}
+
+.map-symbol {
+    font-size: 20px;
+}
+
+/* Peripheral Notice */
+.peripheral-notice {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: rgba(255, 170, 0, 0.1);
+    border: 2px solid #ffaa00;
+    border-radius: 6px;
+    color: #ffaa00;
+    font-size: 12px;
+    text-align: center;
+}
+
+.notice-icon {
+    font-size: 16px;
+}
+
+/* === Telemetry Summary === */
+.telemetry-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    min-width: 150px;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 2px solid #00ff41;
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
+}
+
+.telem-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.telem-label {
+    font-size: 10px;
+    color: #00ff41;
+    opacity: 0.7;
+    letter-spacing: 1px;
+}
+
+.telem-value {
+    font-size: 18px;
+    font-weight: bold;
+    color: #00ff41;
+    text-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
+}
+
+.telem-value.warning {
+    color: #ffaa00;
+    text-shadow: 0 0 5px rgba(255, 170, 0, 0.5);
+}
+
+.telem-value.critical {
+    color: #ff0000;
+    text-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+    animation: pulse 0.5s infinite;
+}
+
+/* === Virtual Joystick === */
+.virtual-joystick-container {
+    position: fixed;
+    bottom: 200px;
+    left: 50px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    z-index: 100;
+}
+
+.virtual-joystick {
+    position: relative;
+    width: 150px;
+    height: 150px;
+    cursor: move;
+}
+
+.joystick-base {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(0, 255, 65, 0.1), rgba(0, 0, 0, 0.5));
+    border: 3px solid #00ff41;
+    border-radius: 50%;
+    box-shadow:
+        0 0 20px rgba(0, 255, 65, 0.3),
+        inset 0 0 30px rgba(0, 0, 0, 0.5);
+}
+
+.joystick-stick {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(145deg, #00ff41, #00cc33);
+    border: 2px solid #00ff41;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 4px 12px rgba(0, 255, 65, 0.5);
+    transition: transform 0.05s ease;
+}
+
+.joystick-label {
+    font-size: 12px;
+    color: #00ff41;
+    font-weight: bold;
+    text-align: center;
+}
+
+/* === Responsive Design === */
+@media (max-width: 1200px) {
+    .control-panel {
+        flex-direction: column;
+        align-items: stretch;
+        min-height: auto;
+    }
+
+    .quick-actions,
+    .telemetry-summary {
+        flex-direction: row;
+        min-width: auto;
+        width: 100%;
+    }
+
+    .mode-toggle {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .switch-slider {
+        transform: rotate(90deg);
+    }
+}
+
+@media (max-width: 768px) {
+    .fpv-view {
+        margin: 5px;
+    }
+
+    .control-panel {
+        padding: 10px;
+    }
+
+    .quick-actions {
+        flex-wrap: wrap;
+        gap: 5px;
+    }
+
+    .steampunk-button {
+        flex: 1;
+        min-width: calc(50% - 5px);
+        padding: 10px;
+        font-size: 12px;
+    }
+
+    .mode-icon {
+        font-size: 24px;
+    }
+
+    .mode-label {
+        font-size: 12px;
+    }
+}

@@ -1,0 +1,12 @@
+<div class="security-alert-banner" *ngIf="alerts.length > 0">
+  <div class="alert-list" *ngIf="alerts.length <= 3">
+    <div *ngFor="let alert of alerts" class="alert-item" [class]="'alert-item ' + severityClass(alert)">
+      <span class="tag">{{ alert.severity.toUpperCase() }}</span>
+      <span class="message">{{ alert.message }}</span>
+      <button class="dismiss" (click)="dismiss(alert)">✕</button>
+    </div>
+  </div>
+  <div class="marquee-wrapper" *ngIf="alerts.length > 3">
+    <div class="marquee" [attr.data-text]="marqueeText">{{ marqueeText }}</div>
+  </div>
+</div>

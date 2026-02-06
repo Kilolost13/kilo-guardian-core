@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPN Client - Kilo Guardian</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #00ff88;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .panel {
+            background: #0a0a0a;
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.3);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #00ff88;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
+        .header p {
+            color: #888;
+            font-size: 14px;
+        }
+
+        .status-box {
+            background: rgba(0, 255, 136, 0.05);
+            border: 1px solid #00ff88;
+            border-radius: 6px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .status-light {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            box-shadow: 0 0 20px currentColor;
+        }
+
+        .status-light.disconnected {
+            background: #666;
+            color: #666;
+        }
+
+        .status-light.connected {
+            background: #00ff88;
+            color: #00ff88;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.6;
+            }
+        }
+
+        .status-text {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .status-detail {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #888;
+        }
+
+        .form-input,
+        .form-textarea {
+            width: 100%;
+            padding: 12px;
+            background: #000;
+            border: 1px solid #00ff88;
+            border-radius: 4px;
+            color: #00ff88;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        .form-textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .form-input:focus,
+        .form-textarea:focus {
+            outline: none;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: rgba(0, 255, 136, 0.1);
+            border: 2px solid #00ff88;
+            border-radius: 6px;
+            color: #00ff88;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn:hover:not(:disabled) {
+            background: rgba(0, 255, 136, 0.3);
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-danger {
+            border-color: #ff0055;
+            color: #ff0055;
+            background: rgba(255, 0, 85, 0.1);
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: rgba(255, 0, 85, 0.3);
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert.success {
+            background: rgba(0, 255, 136, 0.2);
+            border: 1px solid #00ff88;
+            color: #00ff88;
+        }
+
+        .alert.error {
+            background: rgba(255, 0, 85, 0.2);
+            border: 1px solid #ff0055;
+            color: #ff0055;
+        }
+
+        .alert.warning {
+            background: rgba(255, 170, 0, 0.2);
+            border: 1px solid #ffaa00;
+            color: #ffaa00;
+        }
+
+        .profiles-list {
+            margin: 20px 0;
+        }
+
+        .profile-item {
+            background: rgba(0, 255, 136, 0.05);
+            border: 1px solid #00ff88;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .profile-item:hover {
+            background: rgba(0, 255, 136, 0.1);
+        }
+
+        .profile-name {
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .profile-type {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+        }
+
+        .locked-feature {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+
+        .locked-feature i {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #ffaa00;
+        }
+
+        .upgrade-box {
+            background: rgba(255, 170, 0, 0.1);
+            border: 2px solid #ffaa00;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .upgrade-box h3 {
+            color: #ffaa00;
+            margin-bottom: 10px;
+        }
+
+        .upgrade-box p {
+            color: #888;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="panel">
+            <div class="header">
+                <h1><i class="fas fa-shield-alt"></i> VPN CLIENT</h1>
+                <p>Route Bastion traffic through external VPN</p>
+            </div>
+
+            <div id="alertBox"></div>
+
+            <div class="status-box">
+                <div class="status-light disconnected" id="statusLight"></div>
+                <div class="status-text" id="statusText">Disconnected</div>
+                <div class="status-detail" id="statusDetail">Not connected to any VPN</div>
+            </div>
+
+            <div id="contentArea">
+                <!-- Content will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = window.location.origin;
+        const API_KEY = 'kilo-dev-key-2025';
+
+        let isConnected = false;
+        let currentProfile = null;
+        let hasAccess = false;
+
+        async function checkLicenseAndLoad() {
+            try {
+                // Check VPN client access
+                const response = await fetch(API_BASE_URL + '/api/vpn/client/status', {
+                    headers: { 'X-API-Key': API_KEY }
+                });
+
+                const data = await response.json();
+
+                if (data.upgrade_required) {
+                    showLockedState(data.upgrade_info);
+                } else {
+                    hasAccess = true;
+                    loadClientInterface();
+                    if (data.connected) {
+                        updateConnectionStatus(true, data.profile, data.public_ip);
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking license:', error);
+                loadClientInterface(); // Load anyway for dev
+            }
+        }
+
+        function showLockedState(upgradeInfo) {
+            const contentArea = document.getElementById('contentArea');
+            contentArea.innerHTML = `
+                <div class="locked-feature">
+                    <i class="fas fa-lock"></i>
+                    <h2 style="color: #ffaa00; margin-bottom: 15px;">Premium Feature</h2>
+                    <p style="margin-bottom: 20px;">
+                        VPN Client routing requires an active subscription to protect your privacy
+                        and route Bastion AI traffic through external VPN providers.
+                    </p>
+                </div>
+
+                <div class="upgrade-box">
+                    <h3>Upgrade to Pro</h3>
+                    <p>Route your traffic through WireGuard or OpenVPN providers</p>
+                    <button class="btn" onclick="window.open('https://bastion-ai.com/pricing', '_blank')">
+                        <i class="fas fa-star"></i> View Plans
+                    </button>
+                </div>
+            `;
+        }
+
+        function loadClientInterface() {
+            const contentArea = document.getElementById('contentArea');
+            contentArea.innerHTML = `
+                <div class="form-group">
+                    <label class="form-label">VPN Type</label>
+                    <select id="vpnType" class="form-input">
+                        <option value="wireguard">WireGuard</option>
+                        <option value="openvpn">OpenVPN</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Profile Name</label>
+                    <input type="text" id="profileName" class="form-input" placeholder="e.g., mullvad-us-nyc">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Configuration</label>
+                    <textarea id="vpnConfig" class="form-textarea" 
+                              placeholder="Paste your VPN configuration here..."></textarea>
+                </div>
+
+                <button class="btn" onclick="addProfile()" style="margin-bottom: 10px;">
+                    <i class="fas fa-plus"></i> Add Profile
+                </button>
+
+                <div id="profilesList" class="profiles-list"></div>
+
+                <button class="btn btn-danger" onclick="disconnect()" id="disconnectBtn" style="display: none;">
+                    <i class="fas fa-stop"></i> Disconnect
+                </button>
+            `;
+
+            loadProfiles();
+        }
+
+        async function loadProfiles() {
+            // TODO: Load profiles from server
+            // For now, show empty state
+            const profilesList = document.getElementById('profilesList');
+            if (profilesList) {
+                profilesList.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">No profiles configured</p>';
+            }
+        }
+
+        async function addProfile() {
+            const type = document.getElementById('vpnType').value;
+            const name = document.getElementById('profileName').value;
+            const config = document.getElementById('vpnConfig').value;
+
+            if (!name || !config) {
+                showAlert('Please fill in all fields', 'error');
+                return;
+            }
+
+            try {
+                const endpoint = type === 'wireguard' ? '/api/vpn/client/wireguard' : '/api/vpn/client/openvpn';
+
+                const response = await fetch(API_BASE_URL + endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': API_KEY
+                    },
+                    body: JSON.stringify({ name, config })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert('Profile added successfully!', 'success');
+                    document.getElementById('profileName').value = '';
+                    document.getElementById('vpnConfig').value = '';
+                    loadProfiles();
+                } else if (data.upgrade_required) {
+                    showAlert('This feature requires a paid subscription', 'warning');
+                } else {
+                    showAlert(data.error || 'Failed to add profile', 'error');
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function connectProfile(profileName) {
+            try {
+                const response = await fetch(API_BASE_URL + '/api/vpn/client/connect', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': API_KEY
+                    },
+                    body: JSON.stringify({ profile: profileName })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    updateConnectionStatus(true, profileName, data.public_ip);
+                    showAlert('Connected successfully!', 'success');
+                } else if (data.upgrade_required) {
+                    showAlert('VPN routing requires a paid subscription', 'warning');
+                } else {
+                    showAlert(data.error || 'Connection failed', 'error');
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function disconnect() {
+            try {
+                const response = await fetch(API_BASE_URL + '/api/vpn/client/disconnect', {
+                    method: 'POST',
+                    headers: { 'X-API-Key': API_KEY }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    updateConnectionStatus(false);
+                    showAlert('Disconnected', 'success');
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        function updateConnectionStatus(connected, profile = null, publicIp = null) {
+            isConnected = connected;
+            currentProfile = profile;
+
+            const statusLight = document.getElementById('statusLight');
+            const statusText = document.getElementById('statusText');
+            const statusDetail = document.getElementById('statusDetail');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+
+            if (connected) {
+                statusLight.className = 'status-light connected';
+                statusText.textContent = 'Connected';
+                statusDetail.textContent = `Profile: ${profile}${publicIp ? ` | IP: ${publicIp}` : ''}`;
+                if (disconnectBtn) disconnectBtn.style.display = 'flex';
+            } else {
+                statusLight.className = 'status-light disconnected';
+                statusText.textContent = 'Disconnected';
+                statusDetail.textContent = 'Not connected to any VPN';
+                if (disconnectBtn) disconnectBtn.style.display = 'none';
+            }
+        }
+
+        function showAlert(message, type) {
+            const alertBox = document.getElementById('alertBox');
+            const icon = type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle';
+            alertBox.innerHTML = `<div class="alert ${type}"><i class="fas fa-${icon}"></i> ${message}</div>`;
+            setTimeout(() => {
+                if (type !== 'error') alertBox.innerHTML = '';
+            }, 5000);
+        }
+
+        // Initialize
+        checkLicenseAndLoad();
+    </script>
+</body>
+
+</html>

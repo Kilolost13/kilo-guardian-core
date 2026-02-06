@@ -1,0 +1,131 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Kilo Audit Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #0b1220;
+            color: #e6eef3;
+            padding: 20px
+        }
+
+        .card {
+            background: #071118;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            border: 1px solid #123
+        }
+
+        pre {
+            background: #051018;
+            padding: 8px;
+            border-radius: 4px;
+            overflow: auto
+        }
+
+        button {
+            padding: 8px 10px;
+            border-radius: 6px;
+            background: #10b981;
+            color: #041018;
+            border: none;
+            cursor: pointer
+        }
+
+        .muted {
+            color: #94a3b8
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Kilo — Submissions Audit Viewer</h1>
+    <p class="muted">This page displays local submission backups and provides verification. For local appliance use
+        only.</p>
+
+    <div style="display:flex;gap:8px;margin-top:12px;">
+        <button id="refresh-btn">Refresh List</button>
+        <button id="verify-btn">Run Verification</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        // API key injected server-side
+        window.KILO_API_KEY = %% KILO_API_KEY %%;
+        async function getApiKey() { return window.KILO_API_KEY || null; }
+
+        async function listSubmissions() {
+            const key = await getApiKey();
+            const h = key ? { 'X-API-Key': key } : {};
+            const r = await fetch('/api/submissions/list', { headers: h });
+            return await r.json();
+        }
+
+        async function verifySubmissions() {
+            const key = await getApiKey();
+            const h = key ? { 'X-API-Key': key } : {};
+            const r = await fetch('/api/submissions/verify', { headers: h });
+            return await r.json();
+        }
+
+        function showList(data) {
+            const container = document.getElementById('results');
+            container.innerHTML = '';
+            const meta = document.createElement('div');
+            meta.className = 'card';
+            meta.innerHTML = `<strong>Total:</strong> ${data.total}`;
+            container.appendChild(meta);
+
+            (data.submissions || []).forEach(s => {
+                const c = document.createElement('div');
+                c.className = 'card';
+                c.innerHTML = `<div style="display:flex;justify-content:space-between"><div><strong>${s.tool}</strong> &mdash; ${s.action}</div><div class="muted">${s.timestamp}</div></div>`;
+                const pre = document.createElement('pre');
+                pre.textContent = JSON.stringify(s.data, null, 2) + '\n\nchecksum: ' + (s.checksum || '') + '\nhmac: ' + (s.hmac || '');
+                c.appendChild(pre);
+                container.appendChild(c);
+            });
+        }
+
+        async function runVerify() {
+            const container = document.getElementById('results');
+            container.innerHTML = '<div class="card">Running verification...</div>';
+            const res = await verifySubmissions();
+            container.innerHTML = '';
+            const c = document.createElement('div');
+            c.className = 'card';
+            c.innerHTML = `<div><strong>Checked:</strong> ${res.checked}</div><div><strong>Mismatches:</strong> ${res.mismatches.length}</div><div><strong>Missing backups:</strong> ${res.missing_backups.length}</div>`;
+            container.appendChild(c);
+
+            if (res.mismatches && res.mismatches.length) {
+                const m = document.createElement('pre');
+                m.textContent = JSON.stringify(res.mismatches, null, 2);
+                container.appendChild(m);
+            }
+            if (res.missing_backups && res.missing_backups.length) {
+                const mb = document.createElement('pre');
+                mb.textContent = JSON.stringify(res.missing_backups, null, 2);
+                container.appendChild(mb);
+            }
+        }
+
+        document.getElementById('refresh-btn').addEventListener('click', async () => {
+            const data = await listSubmissions();
+            showList(data);
+        });
+        document.getElementById('verify-btn').addEventListener('click', runVerify);
+
+        // Auto-load on open
+        (async () => {
+            const data = await listSubmissions();
+            showList(data);
+        })();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,26 @@
+<app-security-alert-banner></app-security-alert-banner>
+<app-status-bar></app-status-bar>
+<app-setup-wizard></app-setup-wizard>
+
+<div class="kilo-interface-container">
+    
+    <div class="status-panel">
+        <div class="light red" [class.active]="systemStatus === 'RED'"></div>
+        <div class="light yellow" [class.active]="systemStatus === 'YELLOW'"></div>
+        <div class="light green" [class.active]="systemStatus === 'GREEN'"></div>
+    </div>
+
+    <div class="terminal-window">
+        <div class="header">
+            <span>KILO_OS v1.0 [GUARDIAN]</span>
+            <span class="blink">_</span>
+        </div>
+        
+        <div class="content-area">
+            <p *ngIf="systemStatus === 'RED'">⚠️ CRITICAL FAILURE: SYSTEM HALTED</p>
+            <p *ngIf="systemStatus === 'YELLOW'">⚠️ SYSTEM DEGRADED: {{statusMessage}}</p>
+            <p *ngIf="systemStatus === 'GREEN'">✅ ALL SYSTEMS OPERATIONAL</p>
+        </div>
+    </div>
+
+</div>

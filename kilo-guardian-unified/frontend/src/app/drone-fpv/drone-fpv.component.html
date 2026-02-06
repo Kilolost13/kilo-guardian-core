@@ -1,0 +1,140 @@
+<div class="fpv-container steampunk-theme">
+    <!-- Main FPV View -->
+    <div class="fpv-view">
+        <!-- Video Canvas (Background) -->
+        <canvas #videoCanvas class="video-canvas"></canvas>
+
+        <!-- HUD Overlay Canvas -->
+        <canvas #hudCanvas class="hud-canvas"></canvas>
+
+        <!-- Connection Status Indicator -->
+        <div class="connection-status" [class.connected]="connectionStatus === 'connected'"
+            [class.partial]="connectionStatus === 'partial'" [class.disconnected]="connectionStatus === 'disconnected'">
+            <span class="status-icon">⚡</span>
+            <span class="status-text">{{ connectionStatus | uppercase }}</span>
+        </div>
+    </div>
+
+    <!-- Control Panel (Below FPV) -->
+    <div class="control-panel">
+        <!-- Left Side: Quick Actions -->
+        <div class="quick-actions">
+            <button class="steampunk-button danger" (click)="arm()" [disabled]="telemetry.armed">
+                <span class="button-icon">🔓</span>
+                ARM
+            </button>
+            <button class="steampunk-button success" (click)="takeoff()" [disabled]="!telemetry.armed">
+                <span class="button-icon">⬆</span>
+                TAKEOFF
+            </button>
+            <button class="steampunk-button warning" (click)="land()">
+                <span class="button-icon">⬇</span>
+                LAND
+            </button>
+            <button class="steampunk-button danger" (click)="rtl()">
+                <span class="button-icon">🏠</span>
+                RTL
+            </button>
+        </div>
+
+        <!-- Center: Control Mode Switch -->
+        <div class="control-mode-switch">
+            <div class="mode-toggle" (click)="toggleControlMode()">
+                <!-- Manual Side -->
+                <div class="mode-option manual" [class.active]="controlMode === 'manual'">
+                    <div class="mode-icon">
+                        <span class="gamepad-icon">🎮</span>
+                        @if (gamepadConnected) {
+                        <span class="peripheral-name">{{ gamepadName }}</span>
+                        }
+                    </div>
+                    <span class="mode-label">MANUAL</span>
+
+                    <!-- Manual Control Enable Button -->
+                    @if (controlMode === 'manual' && !manualControlEnabled) {
+                    <button class="enable-control-btn" (click)="enableManualControl(); $event.stopPropagation()">
+                        ENABLE CONTROL
+                    </button>
+                    }
+                    @if (controlMode === 'manual' && manualControlEnabled) {
+                    <div class="control-active-indicator">
+                        <span class="pulse-dot"></span>
+                        CONTROL ACTIVE
+                    </div>
+                    }
+                </div>
+
+                <!-- Center Switch -->
+                <div class="switch-slider" [class.ai-mode]="controlMode === 'ai'">
+                    <div class="slider-handle"></div>
+                </div>
+
+                <!-- AI Side -->
+                <div class="mode-option ai" [class.active]="controlMode === 'ai'">
+                    <div class="mode-icon">
+                        <span class="ai-icon" [class.glow]="controlMode === 'ai'">🤖</span>
+                        <span class="ai-text" [class.glow]="controlMode === 'ai'">AI</span>
+                    </div>
+                    <span class="mode-label">AUTONOMOUS</span>
+
+                    <!-- Map Icon Button -->
+                    @if (controlMode === 'ai') {
+                    <button class="map-icon-btn" [class.glow]="showMapPlanner"
+                        (click)="toggleMapPlanner(); $event.stopPropagation()">
+                        <span class="map-symbol">🗺️</span>
+                        MISSION PLANNER
+                    </button>
+                    }
+                </div>
+            </div>
+
+            <!-- Gamepad Detection Notice -->
+            @if (!gamepadConnected && controlMode === 'manual') {
+            <div class="peripheral-notice">
+                <span class="notice-icon">⚠</span>
+                No gamepad detected. Connect Xbox or compatible controller.
+            </div>
+            }
+        </div>
+
+        <!-- Right Side: Telemetry Summary -->
+        <div class="telemetry-summary">
+            <div class="telem-item">
+                <span class="telem-label">ALTITUDE</span>
+                <span class="telem-value">{{ (telemetry.alt || 0).toFixed(1) }}m</span>
+            </div>
+            <div class="telem-item">
+                <span class="telem-label">SPEED</span>
+                <span class="telem-value">{{ (telemetry.ground_speed || 0).toFixed(1) }}m/s</span>
+            </div>
+            <div class="telem-item">
+                <span class="telem-label">BATTERY</span>
+                <span class="telem-value" [class.warning]="(telemetry.battery || 0) < 30"
+                    [class.critical]="(telemetry.battery || 0) < 15">
+                    {{ (telemetry.battery || 0).toFixed(0) }}%
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Virtual Joystick Overlay (Touch/Mouse Control) -->
+    @if (controlMode === 'manual' && manualControlEnabled && !gamepadConnected) {
+    <div class="virtual-joystick-container">
+        <div class="virtual-joystick" (mousedown)="onJoystickStart($event)" (mousemove)="onJoystickMove($event)"
+            (mouseup)="onJoystickEnd()" (mouseleave)="onJoystickEnd()" (touchstart)="onJoystickStart($event)"
+            (touchmove)="onJoystickMove($event)" (touchend)="onJoystickEnd()">
+            <div class="joystick-base"></div>
+            <div class="joystick-stick"
+                [style.transform]="'translate(' + (virtualJoystickPosition.x * 50) + 'px, ' + (virtualJoystickPosition.y * 50) + 'px)'">
+            </div>
+        </div>
+        <span class="joystick-label">PITCH/ROLL</span>
+    </div>
+    }
+
+    <!-- Map Planner Modal -->
+    @if (showMapPlanner) {
+    <app-mission-planner [telemetry]="telemetry" (close)="toggleMapPlanner()">
+    </app-mission-planner>
+    }
+</div>

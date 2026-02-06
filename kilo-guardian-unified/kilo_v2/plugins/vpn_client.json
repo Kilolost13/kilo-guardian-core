@@ -1,0 +1,20 @@
+{
+  "name": "vpn_client",
+  "version": "1.0.0",
+  "description": "VPN Client for routing Bastion traffic through external VPN providers",
+  "author": "Bastion AI Team",
+  "keywords": ["vpn client", "connect vpn", "route traffic", "vpn connection", "anonymity", "privacy"],
+  "requirements": [],
+  "system_requirements": {
+    "packages": ["wireguard-tools", "openvpn"],
+    "permissions": ["network_admin"]
+  },
+  "configuration": {
+    "auto_reconnect": true,
+    "connection_timeout": 30,
+    "verify_connection": true
+  },
+  "enabled": false,
+  "isolate_on_failure": false,
+  "background_task": false
+}

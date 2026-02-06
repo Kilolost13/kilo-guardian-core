@@ -1,0 +1,236 @@
+# ---------------------------------------------------------------------------
+# Kilo Guardian -- Consolidated Service Pods (Unified Image)
+# ---------------------------------------------------------------------------
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kilo-reasoning-engine
+  namespace: kilo-guardian
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kilo-reasoning-engine
+  template:
+    metadata:
+      labels:
+        app: kilo-reasoning-engine
+    spec:
+      securityContext:
+        runAsUser: 0
+      containers:
+      - name: reasoning
+        image: kilo/guardian:latest
+        imagePullPolicy: IfNotPresent
+        workingDir: /app
+        command: ["python3", "-m", "kilo_v2.micro-reasoning"]
+        env:
+        - name: PYTHONPATH
+          value: "/app:/shared_repo"
+        - name: TRANSFORMERS_CACHE
+          value: "/app/kilo_v2/user_data/huggingface"
+        ports:
+        - containerPort: 8001
+        envFrom:
+        - configMapRef:
+            name: kilo-guardian-config
+        volumeMounts:
+        - name: source-code
+          mountPath: /app
+        - name: microservices-repo
+          mountPath: /shared_repo
+        - name: shared-data
+          mountPath: /app/kilo_data
+      volumes:
+      - name: source-code
+        hostPath:
+          path: /home/kilo/Desktop/kilo-guardian-unified
+          type: Directory
+      - name: microservices-repo
+        hostPath:
+          path: /home/kilo/Desktop/Kilo_Ai_microservice
+          type: Directory
+      - name: shared-data
+        persistentVolumeClaim:
+          claimName: shared-kilo-data
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kilo-meds
+  namespace: kilo-guardian
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kilo-meds
+  template:
+    metadata:
+      labels:
+        app: kilo-meds
+    spec:
+      securityContext:
+        runAsUser: 0
+      containers:
+      - name: meds
+        image: kilo/guardian:latest
+        imagePullPolicy: IfNotPresent
+        workingDir: /shared_repo/services/meds
+        command: ["python3", "main.py"]
+        env:
+        - name: PYTHONPATH
+          value: "/shared_repo"
+        ports:
+        - containerPort: 9000
+        envFrom:
+        - configMapRef:
+            name: kilo-config
+        volumeMounts:
+        - name: microservices-repo
+          mountPath: /shared_repo
+        - name: shared-data
+          mountPath: /app/kilo_data
+      volumes:
+      - name: microservices-repo
+        hostPath:
+          path: /home/kilo/Desktop/Kilo_Ai_microservice
+          type: Directory
+      - name: shared-data
+        persistentVolumeClaim:
+          claimName: shared-kilo-data
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kilo-financial
+  namespace: kilo-guardian
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kilo-financial
+  template:
+    metadata:
+      labels:
+        app: kilo-financial
+    spec:
+      securityContext:
+        runAsUser: 0
+      containers:
+      - name: financial
+        image: kilo/guardian:latest
+        imagePullPolicy: IfNotPresent
+        workingDir: /shared_repo/services/financial
+        command: ["python3", "main.py"]
+        env:
+        - name: PYTHONPATH
+          value: "/shared_repo"
+        ports:
+        - containerPort: 9005
+        envFrom:
+        - configMapRef:
+            name: kilo-config
+        volumeMounts:
+        - name: microservices-repo
+          mountPath: /shared_repo
+        - name: shared-data
+          mountPath: /app/kilo_data
+      volumes:
+      - name: microservices-repo
+        hostPath:
+          path: /home/kilo/Desktop/Kilo_Ai_microservice
+          type: Directory
+      - name: shared-data
+        persistentVolumeClaim:
+          claimName: shared-kilo-data
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kilo-habits
+  namespace: kilo-guardian
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kilo-habits
+  template:
+    metadata:
+      labels:
+        app: kilo-habits
+    spec:
+      securityContext:
+        runAsUser: 0
+      containers:
+      - name: habits
+        image: kilo/guardian:latest
+        imagePullPolicy: IfNotPresent
+        workingDir: /shared_repo/services/habits
+        command: ["python3", "main.py"]
+        env:
+        - name: PYTHONPATH
+          value: "/shared_repo"
+        ports:
+        - containerPort: 9000
+        envFrom:
+        - configMapRef:
+            name: kilo-config
+        volumeMounts:
+        - name: microservices-repo
+          mountPath: /shared_repo
+        - name: shared-data
+          mountPath: /app/kilo_data
+      volumes:
+      - name: microservices-repo
+        hostPath:
+          path: /home/kilo/Desktop/Kilo_Ai_microservice
+          type: Directory
+      - name: shared-data
+        persistentVolumeClaim:
+          claimName: shared-kilo-data
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kilo-reminder
+  namespace: kilo-guardian
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kilo-reminder
+  template:
+    metadata:
+      labels:
+        app: kilo-reminder
+    spec:
+      securityContext:
+        runAsUser: 0
+      containers:
+      - name: reminder
+        image: kilo/guardian:latest
+        imagePullPolicy: IfNotPresent
+        workingDir: /shared_repo/services/reminder
+        command: ["python3", "main.py"]
+        env:
+        - name: PYTHONPATH
+          value: "/shared_repo"
+        ports:
+        - containerPort: 9002
+        envFrom:
+        - configMapRef:
+            name: kilo-config
+        volumeMounts:
+        - name: microservices-repo
+          mountPath: /shared_repo
+        - name: shared-data
+          mountPath: /app/kilo_data
+      volumes:
+      - name: microservices-repo
+        hostPath:
+          path: /home/kilo/Desktop/Kilo_Ai_microservice
+          type: Directory
+      - name: shared-data
+        persistentVolumeClaim:
+          claimName: shared-kilo-data

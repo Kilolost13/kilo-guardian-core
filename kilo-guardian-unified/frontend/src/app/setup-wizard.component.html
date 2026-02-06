@@ -1,0 +1,49 @@
+<div class="wizard-container zombie-glow-border">
+    <div class="progress-bar">
+        <div class="step" [class.active]="step >= 1">1. Identity</div>
+        <div class="step" [class.active]="step >= 2">2. Biometrics</div>
+        <div class="step" [class.active]="step >= 3">3. Environment</div>
+    </div>
+
+    <div *ngIf="step === 1" class="wizard-step">
+        <h2>Who are you?</h2>
+        <input type="text" [(ngModel)]="userData.name" placeholder="Your Name" class="zombie-input">
+        <input type="text" [(ngModel)]="userData.aiName" placeholder="Name your AI (Default: Kilo)" class="zombie-input">
+        
+        <h3>Interests (for Personality)</h3>
+        <textarea [(ngModel)]="userData.interests" placeholder="e.g. Coding, Gaming, Cooking..." class="zombie-input"></textarea>
+        
+        <button (click)="nextStep()" class="btn-zombie">NEXT >></button>
+    </div>
+
+    <div *ngIf="step === 2" class="wizard-step">
+        <h2>Security Calibration</h2>
+        <p>Look at the camera. This is for the Intruder Detection System.</p>
+        
+        <div class="camera-feed">
+            <video #videoElement autoplay class="feed-preview"></video>
+            <canvas #canvasElement style="display:none"></canvas>
+        </div>
+        
+        <button (click)="capturePhoto()" class="btn-zombie">📸 CAPTURE FACE ID</button>
+        <p *ngIf="photoCaptured" style="color: var(--zombie-green)">✅ FACE DATA SECURED</p>
+        
+        <button *ngIf="photoCaptured" (click)="nextStep()" class="btn-zombie">NEXT >></button>
+    </div>
+
+    <div *ngIf="step === 3" class="wizard-step">
+        <h2>Environment Data</h2>
+        
+        <div class="form-group">
+            <label>Household Size (People + Pets):</label>
+            <input type="number" [(ngModel)]="userData.householdSize" class="zombie-input">
+        </div>
+
+        <div class="form-group">
+            <button (click)="detectLocation()" class="btn-zombie-outline">📍 Auto-Detect Location</button>
+            <p>Lat: {{userData.location.lat}}, Lon: {{userData.location.lon}}</p>
+        </div>
+
+        <button (click)="finishSetup()" class="btn-zombie-finish">INITIALIZE SYSTEM</button>
+    </div>
+</div>

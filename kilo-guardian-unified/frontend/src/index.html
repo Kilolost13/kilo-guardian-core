@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>KiloAngularFrontend</title>
+  <base href="/">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+</head>
+
+<body>
+  <app-root></app-root>
+  <script>
+    // Helper fetch wrapper for API calls that gracefully handles JSON or plain text responses.
+    window.fetchAPI = async function (url, opts) {
+      const res = await fetch(url, opts);
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const json = await res.json();
+        return { ok: res.ok, status: res.status, data: json };
+      }
+      const text = await res.text();
+      return { ok: res.ok, status: res.status, data: text };
+    };
+  </script>
+</body>
+
+</html>

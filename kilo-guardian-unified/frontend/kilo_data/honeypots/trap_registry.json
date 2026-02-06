@@ -1,0 +1,37 @@
+{
+  "kilo_v2/public/.env": {
+    "checksum": "4db971ba84e6a6f654b448fea274e37f0289d446cb31b4b801df7f1cd3f5ab48",
+    "description": "Environment file trap",
+    "created_at": "2025-12-06T14:21:13.237790",
+    "triggers": 0,
+    "last_triggered": null
+  },
+  "kilo_v2/public/config.php": {
+    "checksum": "549998c40f0ca1342f6c79dd23bd7bd34bc62449cea8fe11e88a978797497e47",
+    "description": "PHP config trap",
+    "created_at": "2025-12-06T14:21:13.238266",
+    "triggers": 0,
+    "last_triggered": null
+  },
+  "kilo_v2/public/admin.php": {
+    "checksum": "1d33a5d5a1870b195b8adbed9f69b6e915a098aff09232b35b362136cb7d6319",
+    "description": "Admin panel trap",
+    "created_at": "2025-12-06T14:21:13.239989",
+    "triggers": 0,
+    "last_triggered": null
+  },
+  "kilo_v2/public/backup.sql": {
+    "checksum": "87ea4f79b0d390c4e2bb9342d1b36d3bd6d5b51727e548dd56f4f66f8ee600a6",
+    "description": "DB backup trap",
+    "created_at": "2025-12-06T14:21:13.240656",
+    "triggers": 0,
+    "last_triggered": null
+  },
+  "kilo_data/.git_credentials": {
+    "checksum": "73948da9026963b770a632ccc9de14f4e9ea7b4ff5e659bdcd2f01e4ab191682",
+    "description": "Git credentials trap",
+    "created_at": "2025-12-06T14:21:13.241078",
+    "triggers": 0,
+    "last_triggered": null
+  }
+}

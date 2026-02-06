@@ -1,0 +1,61 @@
+<div class="pill" (click)="toggleModal()" [class.loading]="loading">
+    <span class="light" [ngClass]="lightColor">●</span>
+    <span class="text">Plugins: {{ summary?.total || 0 }}</span>
+    <span class="divider">•</span>
+    <span class="text" [ngClass]="(summary?.unhealthy || 0) > 0 ? 'warn' : 'ok'">
+        Unhealthy: {{ summary?.unhealthy || 0 }}
+    </span>
+</div>
+
+<div class="modal-backdrop" *ngIf="modalOpen" (click)="toggleModal()"></div>
+<div class="modal" *ngIf="modalOpen">
+    <div class="modal-header">
+        <div>
+            <div class="title">Plugin Health</div>
+            <div class="subtitle">Sandbox: {{ summary?.sandbox_enabled ? 'On' : 'Off' }}</div>
+        </div>
+        <button class="close" (click)="toggleModal()">✕</button>
+    </div>
+
+    <div class="chips">
+        <span class="chip">Total: {{ summary?.total || 0 }}</span>
+        <span class="chip healthy">Healthy: {{ summary?.healthy || 0 }}</span>
+        <span class="chip unhealthy">Unhealthy: {{ summary?.unhealthy || 0 }}</span>
+    </div>
+
+    <div class="filters">
+        <label class="filter-toggle">
+            <input type="checkbox" [(ngModel)]="filterUnhealthy"> Unhealthy only
+        </label>
+        <select [(ngModel)]="isolationFilter" class="filter-select">
+            <option [value]="null">All isolation modes</option>
+            <option value="thread">Thread</option>
+            <option value="process">Process</option>
+            <option value="none">None</option>
+        </select>
+        <input type="text" [(ngModel)]="searchQuery" placeholder="Search plugins..." class="filter-search">
+    </div>
+
+    <div class="table">
+        <div class="thead">
+            <div>Name</div>
+            <div>Status</div>
+            <div>Isolation</div>
+            <div>Sandboxed</div>
+            <div>Detail</div>
+            <div>Actions</div>
+        </div>
+        <div class="row" *ngFor="let p of filteredPlugins; trackBy: trackByName">
+            <div class="name">{{ p.name }}</div>
+            <div>
+                <span class="badge" [ngClass]="pluginStatus(p)">{{ p.healthy ? 'Healthy' : 'Unhealthy' }}</span>
+            </div>
+            <div>{{ isolationLabel(p) }}</div>
+            <div>{{ p.sandboxed ? 'Yes' : 'No' }}</div>
+            <div class="detail">{{ p.detail?.last_error || p.detail?.detail || p.detail?.status || '—' }}</div>
+            <div class="actions">
+                <button *ngIf="p.sandboxed" (click)="resetHealth(p.name)" class="reset-btn">Reset</button>
+            </div>
+        </div>
+    </div>
+</div>

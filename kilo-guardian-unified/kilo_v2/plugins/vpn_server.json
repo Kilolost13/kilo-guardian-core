@@ -1,0 +1,24 @@
+{
+  "name": "vpn_server",
+  "version": "1.0.0",
+  "description": "WireGuard VPN Server for secure remote access to Bastion AI",
+  "author": "Bastion AI Team",
+  "keywords": ["vpn", "wireguard", "remote access", "peer", "tunnel", "secure access"],
+  "requirements": [
+    "qrcode==7.4.2",
+    "pillow>=10.0.0"
+  ],
+  "system_requirements": {
+    "packages": ["wireguard", "wireguard-tools"],
+    "permissions": ["network_admin", "cap_net_admin"]
+  },
+  "configuration": {
+    "interface": "wg0",
+    "port": 51820,
+    "server_network": "10.8.0.0/24",
+    "dns_servers": ["1.1.1.1", "8.8.8.8"]
+  },
+  "enabled": false,
+  "isolate_on_failure": false,
+  "background_task": false
+}

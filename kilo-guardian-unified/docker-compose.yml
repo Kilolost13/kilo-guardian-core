@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  kilo:
+    build: .
+    env_file: .env
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/kilo_guardian
+    ports:
+      - "8001:8001"
+    networks:
+      - kilo_net
+
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: kilo_guardian
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - kilo_net
+
+volumes:
+  pgdata:
+
+networks:
+  kilo_net:
+    driver: bridge

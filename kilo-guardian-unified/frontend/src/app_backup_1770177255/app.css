@@ -1,0 +1,34 @@
+/* App Component Styles */
+
+/* Main container takes full viewport */
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.h-screen {
+  height: 100vh;
+  min-height: 100vh;
+}
+
+/* Ensure content areas scroll properly */
+.overflow-y-auto {
+  scrollbar-width: thin;
+  scrollbar-color: #39ff14 #050505;
+}
+
+/* Additional hover effects for interactive elements */
+button:hover {
+  transition: all 0.2s ease;
+}
+
+/* Status indicator pulse animation */
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.animate-pulse {
+  animation: status-pulse 2s ease-in-out infinite;
+}

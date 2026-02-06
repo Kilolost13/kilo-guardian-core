@@ -1,0 +1,94 @@
+<div class="mesh-tracker-container" [class.overlay]="overlayMode">
+    <!-- Connection Status -->
+    <div class="connection-status" [class.connected]="isConnected">
+        <span class="status-icon">{{ isConnected ? '📡' : '⚠️' }}</span>
+        <span class="status-text">{{ isConnected ? 'MESH CONNECTED' : 'MESH DISCONNECTED' }}</span>
+    </div>
+
+    <!-- Map Container -->
+    <div class="map-wrapper">
+        <div #mapContainer class="map-container"></div>
+
+        <!-- Device Counter -->
+        <div class="device-counter">
+            <span class="counter-icon">📡</span>
+            <span class="counter-value">{{ deviceCount }}</span>
+            <span class="counter-label">NODES</span>
+        </div>
+
+        <!-- Map Controls -->
+        <div class="map-controls">
+            <button class="map-btn" (click)="fitAllDevices()" title="Fit All Devices">
+                <span class="btn-icon">🎯</span>
+                FIT ALL
+            </button>
+            <button class="map-btn" (click)="toggleDeviceList()" title="Toggle Device List">
+                <span class="btn-icon">📋</span>
+                {{ showDeviceList ? 'HIDE' : 'SHOW' }} LIST
+            </button>
+        </div>
+    </div>
+
+    <!-- Device List Panel -->
+    @if (showDeviceList) {
+    <div class="device-list-panel">
+        <div class="panel-header">
+            <h3 class="panel-title">MESH DEVICES</h3>
+            <button class="close-panel-btn" (click)="toggleDeviceList()">×</button>
+        </div>
+
+        <div class="device-list">
+            @if (deviceCount === 0) {
+            <div class="no-devices">
+                <p>⚠️ No mesh devices detected</p>
+                <p class="hint">Waiting for position reports...</p>
+            </div>
+            }
+
+            @for (device of getDeviceArray(); track device.id) {
+            <div class="device-card" (click)="centerOnDevice(device.id)">
+                <div class="device-header">
+                    <span class="device-icon">📡</span>
+                    <span class="device-name">{{ device.name }}</span>
+                </div>
+
+                <div class="device-info">
+                    <div class="info-row">
+                        <span class="info-label">ID:</span>
+                        <span class="info-value">{{ device.id.slice(0, 12) }}...</span>
+                    </div>
+
+                    <div class="info-row">
+                        <span class="info-label">Position:</span>
+                        <span class="info-value">{{ device.latitude.toFixed(4) }}, {{ device.longitude.toFixed(4)
+                            }}</span>
+                    </div>
+
+                    <div class="info-row">
+                        <span class="info-label">Altitude:</span>
+                        <span class="info-value">{{ device.altitude.toFixed(1) }} m</span>
+                    </div>
+
+                    <div class="info-row">
+                        <span class="info-label">Battery:</span>
+                        <span class="info-value" [style.color]="getBatteryColor(device.battery)">
+                            {{ device.battery }}%
+                        </span>
+                    </div>
+
+                    <div class="info-row">
+                        <span class="info-label">Signal:</span>
+                        <span class="info-value">SNR {{ device.snr.toFixed(1) }} dB, RSSI {{ device.rssi }} dBm</span>
+                    </div>
+
+                    <div class="info-row">
+                        <span class="info-label">Last Seen:</span>
+                        <span class="info-value">{{ getTimeSince(device.lastSeen) }}</span>
+                    </div>
+                </div>
+            </div>
+            }
+        </div>
+    </div>
+    }
+</div>

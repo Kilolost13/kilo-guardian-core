@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drone Control - Kilo Guardian</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #00ff88;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .header {
+            background: #0a0a0a;
+            border: 2px solid #00ff88;
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
+        .status {
+            padding: 8px 16px;
+            background: rgba(0, 255, 136, 0.2);
+            border: 1px solid #00ff88;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .main-content {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            overflow: hidden;
+        }
+
+        .video-panel {
+            background: #0a0a0a;
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+
+        .video-container {
+            flex: 1;
+            background: #000;
+            border: 1px solid #00ff88;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .video-placeholder {
+            color: #666;
+            font-size: 18px;
+        }
+
+        #videoCanvas {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .hud-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 14px;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.8);
+        }
+
+        .hud-item {
+            margin: 5px 0;
+        }
+
+        .controls-panel {
+            background: #0a0a0a;
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow-y: auto;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+
+        .control-section {
+            border-bottom: 1px solid #00ff88;
+            padding-bottom: 15px;
+        }
+
+        .control-section:last-child {
+            border-bottom: none;
+        }
+
+        .control-section h3 {
+            margin-bottom: 10px;
+            font-size: 16px;
+            color: #00ff88;
+        }
+
+        .button {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0, 255, 136, 0.1);
+            border: 2px solid #00ff88;
+            border-radius: 6px;
+            color: #00ff88;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 5px 0;
+            text-transform: uppercase;
+        }
+
+        .button:hover {
+            background: rgba(0, 255, 136, 0.3);
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
+        }
+
+        .button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .button.danger {
+            border-color: #ff0055;
+            color: #ff0055;
+            background: rgba(255, 0, 85, 0.1);
+        }
+
+        .button.danger:hover {
+            background: rgba(255, 0, 85, 0.3);
+            box-shadow: 0 0 15px rgba(255, 0, 85, 0.5);
+        }
+
+        .telemetry-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .telemetry-item {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid #00ff88;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .telemetry-label {
+            color: #666;
+            font-size: 10px;
+            text-transform: uppercase;
+        }
+
+        .telemetry-value {
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .log-area {
+            background: #000;
+            border: 1px solid #00ff88;
+            border-radius: 4px;
+            padding: 10px;
+            height: 150px;
+            overflow-y: auto;
+            font-size: 11px;
+            color: #666;
+        }
+
+        .log-entry {
+            margin: 2px 0;
+            font-family: monospace;
+        }
+
+        .log-entry.success {
+            color: #00ff88;
+        }
+
+        .log-entry.error {
+            color: #ff0055;
+        }
+
+        .log-entry.info {
+            color: #00bfff;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>✈️ DRONE CONTROL INTERFACE</h1>
+            <div class="status" id="connectionStatus">
+                <span id="statusText">CONNECTING...</span>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Video Panel -->
+            <div class="video-panel">
+                <h3 style="margin-bottom: 15px;">FPV VIDEO STREAM</h3>
+                <div class="video-container">
+                    <canvas id="videoCanvas"></canvas>
+                    <div class="video-placeholder" id="videoPlaceholder">
+                        [ AWAITING VIDEO FEED ]<br>
+                        <small style="color: #444;">Connect to drone to stream video</small>
+                    </div>
+                    <div class="hud-overlay" id="hudOverlay" style="display: none;">
+                        <div class="hud-item">ALT: <span id="hudAlt">0.0</span>m</div>
+                        <div class="hud-item">SPD: <span id="hudSpeed">0.0</span>m/s</div>
+                        <div class="hud-item">BAT: <span id="hudBattery">100</span>%</div>
+                        <div class="hud-item">MODE: <span id="hudMode">STABILIZE</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls Panel -->
+            <div class="controls-panel">
+                <!-- Quick Actions -->
+                <div class="control-section">
+                    <h3>QUICK ACTIONS</h3>
+                    <button class="button" onclick="armDrone()" id="btnArm">🔓 ARM</button>
+                    <button class="button" onclick="takeoff()" id="btnTakeoff" disabled>🚁 TAKEOFF</button>
+                    <button class="button" onclick="land()" id="btnLand" disabled>⬇️ LAND</button>
+                    <button class="button danger" onclick="returnToLaunch()" id="btnRTL" disabled>🏠 RTL</button>
+                </div>
+
+                <!-- Telemetry -->
+                <div class="control-section">
+                    <h3>TELEMETRY</h3>
+                    <div class="telemetry-grid">
+                        <div class="telemetry-item">
+                            <div class="telemetry-label">Latitude</div>
+                            <div class="telemetry-value" id="telLat">---</div>
+                        </div>
+                        <div class="telemetry-item">
+                            <div class="telemetry-label">Longitude</div>
+                            <div class="telemetry-value" id="telLon">---</div>
+                        </div>
+                        <div class="telemetry-item">
+                            <div class="telemetry-label">Altitude</div>
+                            <div class="telemetry-value" id="telAlt">---</div>
+                        </div>
+                        <div class="telemetry-item">
+                            <div class="telemetry-label">Battery</div>
+                            <div class="telemetry-value" id="telBat">---</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Activity Log -->
+                <div class="control-section">
+                    <h3>ACTIVITY LOG</h3>
+                    <div class="log-area" id="activityLog">
+                        <div class="log-entry info">[INFO] Drone Control Interface initialized</div>
+                        <div class="log-entry info">[INFO] Attempting connection to backend...</div>
+                    </div>
+                </div>
+
+                <!-- Open Full Interface -->
+                <button class="button" onclick="openFullInterface()"
+                    style="background: rgba(0, 191, 255, 0.2); border-color: #00bfff; color: #00bfff;">
+                    🎮 OPEN FULL INTERFACE
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8001';
+        const API_KEY = 'kilo-dev-key-2025';
+        let telemetryInterval = null;
+        let isArmed = false;
+
+        function log(message, type = 'info') {
+            const logArea = document.getElementById('activityLog');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            logArea.appendChild(entry);
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+
+        async function checkConnection() {
+            try {
+                const response = await fetch(`${API_BASE}/api/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': API_KEY
+                    },
+                    body: JSON.stringify({ query: 'drone status' })
+                });
+
+                if (response.ok) {
+                    // Parse JSON if it's JSON, otherwise fallback to text
+                    let data;
+                    const contentType = response.headers.get('content-type') || '';
+                    if (contentType.includes('application/json')) {
+                        data = await response.json();
+                    } else {
+                        const text = await response.text();
+                        data = { answer: text };
+                    }
+                    document.getElementById('statusText').textContent = 'CONNECTED';
+                    document.getElementById('connectionStatus').style.background = 'rgba(0, 255, 136, 0.3)';
+                    log('Connected to backend', 'success');
+                    startTelemetry();
+                } else {
+                    throw new Error('Connection failed');
+                }
+            } catch (error) {
+                document.getElementById('statusText').textContent = 'OFFLINE';
+                document.getElementById('connectionStatus').style.background = 'rgba(255, 0, 85, 0.3)';
+                log('Backend offline - using demo mode', 'error');
+                startDemoMode();
+            }
+        }
+
+        function startTelemetry() {
+            if (telemetryInterval) return;
+            telemetryInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`${API_BASE}/api/chat`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-API-Key': API_KEY
+                        },
+                        body: JSON.stringify({ query: 'drone telemetry' })
+                    });
+
+                    if (response.ok) {
+                        let payload;
+                        const contentType = response.headers.get('content-type') || '';
+                        if (contentType.includes('application/json')) {
+                            payload = await response.json();
+                        } else {
+                            const text = await response.text();
+                            payload = { answer: text };
+                        }
+                        updateTelemetry(payload.answer || payload);
+                    }
+                } catch (error) {
+                    console.error('Telemetry error:', error);
+                }
+            }, 2000);
+        }
+
+        function startDemoMode() {
+            // Simulate telemetry in demo mode
+            let altitude = 0;
+            telemetryInterval = setInterval(() => {
+                const demoData = {
+                    telemetry: {
+                        lat: 47.3977 + (Math.random() - 0.5) * 0.0001,
+                        lon: 8.5456 + (Math.random() - 0.5) * 0.0001,
+                        alt: altitude,
+                        ground_speed: isArmed ? Math.random() * 2 : 0,
+                        armed: isArmed,
+                        mode: isArmed ? 'GUIDED' : 'STABILIZE',
+                        battery: 95 - (altitude * 0.1)
+                    },
+                    simulation: true
+                };
+                updateTelemetry(demoData);
+            }, 1000);
+        }
+
+        function updateTelemetry(data) {
+            const tel = data.telemetry || {};
+
+            document.getElementById('telLat').textContent = tel.lat ? tel.lat.toFixed(6) : '---';
+            document.getElementById('telLon').textContent = tel.lon ? tel.lon.toFixed(6) : '---';
+            document.getElementById('telAlt').textContent = tel.alt ? tel.alt.toFixed(1) + 'm' : '---';
+            document.getElementById('telBat').textContent = tel.battery ? tel.battery.toFixed(0) + '%' : '---';
+
+            // Update HUD
+            document.getElementById('hudAlt').textContent = tel.alt ? tel.alt.toFixed(1) : '0.0';
+            document.getElementById('hudSpeed').textContent = tel.ground_speed ? tel.ground_speed.toFixed(1) : '0.0';
+            document.getElementById('hudBattery').textContent = tel.battery ? tel.battery.toFixed(0) : '100';
+            document.getElementById('hudMode').textContent = tel.mode || 'STABILIZE';
+
+            if (tel.alt > 0) {
+                document.getElementById('hudOverlay').style.display = 'block';
+            }
+        }
+
+        async function armDrone() {
+            log('Arming drone...', 'info');
+            try {
+                const response = await fetch(`${API_BASE}/api/drone/arm`, {
+                    method: 'POST',
+                    headers: { 'X-API-Key': API_KEY }
+                });
+
+                if (response.ok) {
+                    isArmed = true;
+                    document.getElementById('btnArm').disabled = true;
+                    document.getElementById('btnTakeoff').disabled = false;
+                    log('Drone armed successfully', 'success');
+                } else {
+                    // Demo mode
+                    isArmed = true;
+                    document.getElementById('btnArm').disabled = true;
+                    document.getElementById('btnTakeoff').disabled = false;
+                    log('Drone armed (DEMO MODE)', 'success');
+                }
+            } catch (error) {
+                log('Error arming drone: ' + error.message, 'error');
+            }
+        }
+
+        async function takeoff() {
+            log('Initiating takeoff...', 'info');
+            try {
+                const response = await fetch(`${API_BASE}/api/drone/takeoff`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': API_KEY
+                    },
+                    body: JSON.stringify({ altitude: 10.0 })
+                });
+
+                if (response.ok || true) {
+                    document.getElementById('btnTakeoff').disabled = true;
+                    document.getElementById('btnLand').disabled = false;
+                    document.getElementById('btnRTL').disabled = false;
+                    log('Takeoff initiated', 'success');
+                }
+            } catch (error) {
+                log('Error during takeoff: ' + error.message, 'error');
+            }
+        }
+
+        async function land() {
+            log('Landing...', 'info');
+            try {
+                await fetch(`${API_BASE}/api/drone/land`, {
+                    method: 'POST',
+                    headers: { 'X-API-Key': API_KEY }
+                });
+                document.getElementById('btnLand').disabled = true;
+                document.getElementById('btnRTL').disabled = true;
+                log('Landing initiated', 'success');
+            } catch (error) {
+                log('Error landing: ' + error.message, 'error');
+            }
+        }
+
+        async function returnToLaunch() {
+            log('Returning to launch...', 'info');
+            try {
+                await fetch(`${API_BASE}/api/drone/rtl`, {
+                    method: 'POST',
+                    headers: { 'X-API-Key': API_KEY }
+                });
+                document.getElementById('btnRTL').disabled = true;
+                log('RTL initiated', 'success');
+            } catch (error) {
+                log('Error during RTL: ' + error.message, 'error');
+            }
+        }
+
+        function openFullInterface() {
+            window.location.href = 'http://localhost:4200/drone-fpv';
+        }
+
+        // Initialize
+        window.onload = () => {
+            log('Initializing drone control interface...', 'info');
+            setTimeout(checkConnection, 500);
+        };
+    </script>
+</body>
+
+</html>

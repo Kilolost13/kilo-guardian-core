@@ -1,0 +1,5 @@
+--requirement ../requirements-prod.txt
+
+# Note: This file delegates to the repository-level pinned requirements
+# `requirements-prod.txt`. Use `pip install -r requirements-prod.txt` from
+# the repo root to install production dependencies.

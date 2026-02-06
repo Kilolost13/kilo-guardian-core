@@ -1,0 +1,18 @@
+# Optional plugin dependencies
+# Install only if using specific plugins
+
+# Meshtastic radio tracking plugin
+meshtastic>=2.2.0
+
+# Drone control plugin (MAVSDK preferred)
+mavsdk>=1.4.0
+
+# Drone control plugin (DroneKit fallback for ArduPilot)
+dronekit>=2.9.2
+
+# ML/AI dependencies for advanced features
+sentence-transformers>=2.2.0
+faiss-cpu>=1.7.4
+
+# Google AI
+google-generativeai>=0.3.0

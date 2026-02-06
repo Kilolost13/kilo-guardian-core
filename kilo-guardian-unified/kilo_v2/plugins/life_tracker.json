@@ -1,0 +1,22 @@
+{
+  "name": "life_tracker",
+  "version": "1.0.0",
+  "description": "Physical fitness, wellness, and self-care monitoring using camera-based activity detection",
+  "author": "Kilo Guardian",
+  "isolate": true,
+  "requires_sandbox": false,
+  "requirements": [],
+  "permissions": [
+    "database",
+    "camera_integration"
+  ],
+  "configuration": {
+    "db_path": "life_tracker.db",
+    "sedentary_warning_hours": 3,
+    "daily_activity_goal_minutes": 30,
+    "ai_feedback_tone": "gentle"
+  },
+  "integrations": {
+    "security_camera": "Uses face detection for activity tracking"
+  }
+}

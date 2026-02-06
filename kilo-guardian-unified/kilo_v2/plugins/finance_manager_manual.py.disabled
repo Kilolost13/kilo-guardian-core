@@ -1,0 +1,923 @@
+"""
+Finance Manager - Manual Entry Plugin
+Tracks spending habits, budgets, grocery lists, financial goals with manual transaction entry
+"""
+
+from plugins.base_plugin import BasePlugin
+import sqlite3
+import json
+from datetime import datetime, timedelta
+from dataclasses import dataclass, asdict
+from typing import List, Dict, Optional
+import os
+
+
+@dataclass
+class Transaction:
+    id: Optional[int]
+    date: str
+    amount: float
+    category: str
+    description: str
+    type: str  # 'expense' or 'income'
+    account: str
+    entry_method: str  # 'manual', 'email', 'csv'
+
+
+@dataclass
+class Budget:
+    category: str
+    monthly_limit: float
+    current_spent: float
+    start_date: str
+
+    def remaining(self):
+        return self.monthly_limit - self.current_spent
+
+    def percentage_used(self):
+        if self.monthly_limit == 0:
+            return 0
+        return (self.current_spent / self.monthly_limit) * 100
+
+
+@dataclass
+class FinancialGoal:
+    id: Optional[int]
+    name: str
+    target_amount: float
+    current_amount: float
+    deadline: str
+    priority: str  # 'low', 'medium', 'high'
+
+    def progress_percentage(self):
+        if self.target_amount == 0:
+            return 0
+        return (self.current_amount / self.target_amount) * 100
+
+    def remaining_amount(self):
+        return self.target_amount - self.current_amount
+
+    def days_remaining(self):
+        deadline_date = datetime.fromisoformat(self.deadline)
+        return (deadline_date - datetime.now()).days
+
+
+class FinanceManagerManual(BasePlugin):
+    """Finance management plugin with manual entry and email integration stub."""
+
+    def __init__(self):
+        super().__init__()
+        self.db_path = "finance.db"
+        self._init_database()
+
+    def get_name(self):
+        return "finance_manager_manual"
+
+    def get_keywords(self):
+        return [
+            "money",
+            "budget",
+            "spending",
+            "expense",
+            "income",
+            "finance",
+            "financial",
+            "transaction",
+            "bank",
+            "banking",
+            "savings",
+            "save",
+            "goal",
+            "grocery",
+            "groceries",
+            "shopping",
+            "list",
+            "bill",
+            "bills",
+            "payment",
+            "cost",
+            "add transaction",
+            "manual entry",
+            "receipt",
+            "purchase",
+        ]
+
+    def _init_database(self):
+        """Initialize SQLite database with required tables."""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        # Transactions table with entry method tracking
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS transactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date TEXT NOT NULL,
+                amount REAL NOT NULL,
+                category TEXT NOT NULL,
+                description TEXT,
+                type TEXT NOT NULL,
+                account TEXT DEFAULT 'default',
+                entry_method TEXT DEFAULT 'manual'
+            )
+        """
+        )
+
+        # Budgets table
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS budgets (
+                category TEXT PRIMARY KEY,
+                monthly_limit REAL NOT NULL,
+                start_date TEXT NOT NULL
+            )
+        """
+        )
+
+        # Financial goals table
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS financial_goals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                target_amount REAL NOT NULL,
+                current_amount REAL DEFAULT 0,
+                deadline TEXT NOT NULL,
+                priority TEXT DEFAULT 'medium'
+            )
+        """
+        )
+
+        # Grocery lists table
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS grocery_lists (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                completed INTEGER DEFAULT 0
+            )
+        """
+        )
+
+        # Grocery items table
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS grocery_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                list_id INTEGER NOT NULL,
+                item_name TEXT NOT NULL,
+                quantity TEXT,
+                estimated_price REAL,
+                checked INTEGER DEFAULT 0,
+                FOREIGN KEY (list_id) REFERENCES grocery_lists (id)
+            )
+        """
+        )
+
+        # Email sync metadata table
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS email_sync_metadata (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                last_sync_time TEXT,
+                email_provider TEXT,
+                sync_enabled INTEGER DEFAULT 0,
+                merchant_patterns TEXT
+            )
+        """
+        )
+
+        conn.commit()
+        conn.close()
+
+    def run(self, query):
+        """Main dispatcher for finance commands."""
+        query_lower = query.lower()
+
+        # Manual transaction entry
+        if any(
+            word in query_lower
+            for word in [
+                "add transaction",
+                "add expense",
+                "add income",
+                "manual entry",
+                "enter transaction",
+            ]
+        ):
+            return self._handle_manual_entry(query)
+
+        # Email integration (STUB)
+        elif "email" in query_lower and any(
+            word in query_lower for word in ["sync", "import", "connect", "setup"]
+        ):
+            return self._handle_email_integration(query)
+
+        # Budget commands
+        elif "budget" in query_lower:
+            if "set" in query_lower or "create" in query_lower:
+                return self._handle_set_budget(query)
+            elif "status" in query_lower or "check" in query_lower:
+                return self._get_budget_status()
+            else:
+                return self._get_budget_status()
+
+        # Spending analysis
+        elif any(word in query_lower for word in ["spending", "spent", "analyze"]):
+            return self._analyze_spending_habits()
+
+        # Summary/overview
+        elif any(word in query_lower for word in ["summary", "overview", "total"]):
+            return self._get_spending_summary()
+
+        # Financial goals
+        elif "goal" in query_lower:
+            if "add" in query_lower or "create" in query_lower or "set" in query_lower:
+                return self._handle_add_goal(query)
+            else:
+                return self._get_goals_status()
+
+        # Grocery lists
+        elif any(word in query_lower for word in ["grocery", "shopping list"]):
+            if "create" in query_lower or "new" in query_lower:
+                return self._handle_create_grocery_list(query)
+            else:
+                return self._show_grocery_lists()
+
+        # Financial advice
+        elif any(word in query_lower for word in ["advice", "suggestion", "recommend"]):
+            return self._provide_financial_advice()
+
+        else:
+            return {
+                "type": "finance_help",
+                "content": {
+                    "message": "Finance Manager - Manual Entry Mode",
+                    "commands": [
+                        "add transaction [amount] [category] [description] - Manually add expense",
+                        "add income [amount] [source] - Add income",
+                        "setup email sync - Configure email transaction import (STUB)",
+                        "set budget [category] [amount] - Set monthly budget",
+                        "budget status - Check budget usage",
+                        "spending summary - View spending overview",
+                        "add goal [name] [amount] [deadline] - Create financial goal",
+                        "create grocery list [name] - Start new shopping list",
+                        "financial advice - Get spending recommendations",
+                    ],
+                    "features": [
+                        "✅ Manual transaction entry",
+                        "📧 Email integration (stub ready)",
+                        "📊 Budget tracking",
+                        "🎯 Financial goals",
+                        "🛒 Grocery lists",
+                        "💡 Smart recommendations",
+                    ],
+                },
+            }
+
+    def _handle_manual_entry(self, query):
+        """
+        Handle manual transaction entry.
+        Example: "add transaction 45.99 groceries Walmart shopping"
+        """
+        # Simple parsing - in production would be more sophisticated
+        parts = query.lower().split()
+
+        try:
+            # Find amount (first number)
+            amount = None
+            amount_index = -1
+            for i, part in enumerate(parts):
+                try:
+                    amount = float(part.replace("$", "").replace(",", ""))
+                    amount_index = i
+                    break
+                except ValueError:
+                    continue
+
+            if amount is None:
+                return {
+                    "type": "manual_entry_prompt",
+                    "content": {
+                        "message": "Please provide transaction details",
+                        "format": "add transaction [amount] [category] [description]",
+                        "example": "add transaction 45.99 groceries Walmart weekly shopping",
+                        "categories": [
+                            "groceries",
+                            "dining",
+                            "utilities",
+                            "entertainment",
+                            "transportation",
+                            "healthcare",
+                            "shopping",
+                            "other",
+                        ],
+                    },
+                }
+
+            # Determine transaction type
+            trans_type = "expense"
+            if "income" in query.lower():
+                trans_type = "income"
+
+            # Extract category (word after amount if exists)
+            category = "other"
+            if amount_index + 1 < len(parts):
+                category = parts[amount_index + 1]
+
+            # Extract description (remaining words)
+            description = (
+                " ".join(parts[amount_index + 2 :])
+                if amount_index + 2 < len(parts)
+                else f"{category} purchase"
+            )
+
+            # Add transaction
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            cursor.execute(
+                """
+                INSERT INTO transactions (date, amount, category, description, type, account, entry_method)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+                (
+                    datetime.now().isoformat(),
+                    amount,
+                    category,
+                    description,
+                    trans_type,
+                    "default",
+                    "manual",
+                ),
+            )
+
+            trans_id = cursor.lastrowid
+            conn.commit()
+            conn.close()
+
+            return {
+                "type": "manual_entry_success",
+                "content": {
+                    "message": f"Transaction added successfully",
+                    "transaction": {
+                        "id": trans_id,
+                        "amount": amount,
+                        "category": category,
+                        "description": description,
+                        "type": trans_type,
+                        "entry_method": "manual",
+                        "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                    },
+                    "tip": "💡 Set up email sync to auto-import transactions from bank emails",
+                },
+            }
+
+        except Exception as e:
+            return {
+                "type": "error",
+                "content": {
+                    "message": f"Failed to add transaction: {str(e)}",
+                    "help": "Format: add transaction [amount] [category] [description]",
+                },
+            }
+
+    def _handle_email_integration(self, query):
+        """
+        EMAIL INTEGRATION STUB
+
+        This is a PLACEHOLDER for email transaction import functionality.
+        When implemented, this will:
+        1. Connect to Gmail/Outlook via OAuth
+        2. Scan for transaction notification emails
+        3. Parse merchant names, amounts, dates
+        4. Auto-categorize transactions
+        5. Import into database with entry_method='email'
+        """
+        return {
+            "type": "email_integration_stub",
+            "content": {
+                "message": "📧 EMAIL INTEGRATION - PLACEHOLDER",
+                "status": "Not yet implemented",
+                "description": "This feature will automatically import transactions from bank notification emails",
+                "planned_features": [
+                    "🔐 OAuth2 authentication (Gmail, Outlook, Yahoo)",
+                    "📨 Scan inbox for transaction emails",
+                    "🏪 Parse merchant names, amounts, dates from email body",
+                    "🤖 Auto-categorize transactions using AI",
+                    "📊 Deduplicate with existing transactions",
+                    "⚡ Real-time sync (webhook or polling)",
+                    "🔔 Notifications for large transactions",
+                ],
+                "implementation_notes": {
+                    "oauth": "Use Gmail API / Microsoft Graph API with OAuth2",
+                    "email_patterns": [
+                        "Subject: Transaction Alert",
+                        "Subject: Card Purchase",
+                        "From: alerts@yourbank.com",
+                        "Body regex: 'purchased \\$([0-9.]+) at (.+)'",
+                    ],
+                    "database_table": "email_sync_metadata already created",
+                    "security": "Store OAuth tokens in security_vault.py (encrypted)",
+                    "privacy": "Only read transaction notification emails, not personal messages",
+                },
+                "how_to_implement": {
+                    "step_1": "Install: pip install google-auth google-auth-oauthlib google-auth-httplib2 google-api-python-client",
+                    "step_2": "Create OAuth2 credentials in Google Cloud Console",
+                    "step_3": "Implement email scanning in new file: kilo_v2/plugins/email_transaction_parser.py",
+                    "step_4": "Add regex patterns for each bank's email format",
+                    "step_5": "Call from this plugin via: self._sync_from_email()",
+                },
+                "stub_code_location": "This function (_handle_email_integration)",
+                "current_workaround": "Use manual entry or CSV import until email sync is implemented",
+                "estimated_dev_time": "4-6 hours for full implementation",
+            },
+        }
+
+    def _handle_set_budget(self, query):
+        """Set monthly budget for a category."""
+        # Simple parsing
+        parts = query.lower().split()
+
+        try:
+            # Find amount
+            amount = None
+            for part in parts:
+                try:
+                    amount = float(part.replace("$", "").replace(",", ""))
+                    break
+                except ValueError:
+                    continue
+
+            # Find category
+            categories = [
+                "groceries",
+                "utilities",
+                "entertainment",
+                "dining",
+                "transportation",
+            ]
+            category = None
+            for cat in categories:
+                if cat in query.lower():
+                    category = cat
+                    break
+
+            if not category:
+                category = "other"
+
+            if not amount:
+                return {
+                    "type": "error",
+                    "content": {"message": "Please specify an amount"},
+                }
+
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            cursor.execute(
+                """
+                INSERT OR REPLACE INTO budgets (category, monthly_limit, start_date)
+                VALUES (?, ?, ?)
+            """,
+                (category, amount, datetime.now().isoformat()),
+            )
+
+            conn.commit()
+            conn.close()
+
+            return {
+                "type": "budget_set",
+                "content": {
+                    "message": f"Budget set for {category}",
+                    "category": category,
+                    "monthly_limit": amount,
+                    "status": "active",
+                },
+            }
+
+        except Exception as e:
+            return {
+                "type": "error",
+                "content": {"message": f"Failed to set budget: {str(e)}"},
+            }
+
+    def _get_budget_status(self):
+        """Get current budget status for all categories."""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        # Get all budgets
+        cursor.execute("SELECT category, monthly_limit, start_date FROM budgets")
+        budgets_data = cursor.fetchall()
+
+        budget_status = []
+
+        for cat, limit, start_date in budgets_data:
+            # Calculate current month spending
+            cursor.execute(
+                """
+                SELECT SUM(amount) FROM transactions
+                WHERE category = ? AND type = 'expense'
+                AND strftime('%Y-%m', date) = strftime('%Y-%m', 'now')
+            """,
+                (cat,),
+            )
+
+            spent = cursor.fetchone()[0] or 0.0
+
+            budget = Budget(cat, limit, spent, start_date)
+            remaining = budget.remaining()
+            percentage = budget.percentage_used()
+
+            status = "good"
+            if percentage >= 100:
+                status = "over"
+            elif percentage >= 80:
+                status = "warning"
+
+            budget_status.append(
+                {
+                    "category": cat,
+                    "limit": limit,
+                    "spent": spent,
+                    "remaining": remaining,
+                    "percentage": percentage,
+                    "status": status,
+                }
+            )
+
+        conn.close()
+
+        return {
+            "type": "budget_status",
+            "content": {
+                "message": "Current budget status",
+                "budgets": budget_status,
+                "total_budgeted": sum(b["limit"] for b in budget_status),
+                "total_spent": sum(b["spent"] for b in budget_status),
+                "overall_status": (
+                    "over"
+                    if any(b["status"] == "over" for b in budget_status)
+                    else "good"
+                ),
+            },
+        }
+
+    def _analyze_spending_habits(self):
+        """Analyze spending patterns over the last 3 months."""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        # Last 90 days
+        ninety_days_ago = (datetime.now() - timedelta(days=90)).isoformat()
+
+        # Spending by category
+        cursor.execute(
+            """
+            SELECT category, SUM(amount), COUNT(*) FROM transactions
+            WHERE type = 'expense' AND date >= ?
+            GROUP BY category
+            ORDER BY SUM(amount) DESC
+        """,
+            (ninety_days_ago,),
+        )
+
+        spending_by_category = cursor.fetchall()
+
+        # Monthly trend
+        cursor.execute(
+            """
+            SELECT strftime('%Y-%m', date) as month, SUM(amount)
+            FROM transactions
+            WHERE type = 'expense' AND date >= ?
+            GROUP BY month
+            ORDER BY month DESC
+            LIMIT 3
+        """,
+            (ninety_days_ago,),
+        )
+
+        monthly_trend = cursor.fetchall()
+
+        conn.close()
+
+        # Generate insights
+        insights = []
+        if len(spending_by_category) > 0:
+            top_category = spending_by_category[0]
+            insights.append(
+                f"Your highest spending category is {top_category[0]} (${top_category[1]:.2f})"
+            )
+
+        if len(monthly_trend) >= 2:
+            current_month = monthly_trend[0][1]
+            previous_month = monthly_trend[1][1]
+            if current_month > previous_month * 1.1:
+                insights.append(
+                    f"⚠️ Spending increased {((current_month/previous_month - 1) * 100):.1f}% this month"
+                )
+            elif current_month < previous_month * 0.9:
+                insights.append(
+                    f"✅ Spending decreased {((1 - current_month/previous_month) * 100):.1f}% this month"
+                )
+
+        return {
+            "type": "spending_analysis",
+            "content": {
+                "message": "Spending habits analysis (last 90 days)",
+                "by_category": [
+                    {"category": c[0], "total": c[1], "count": c[2]}
+                    for c in spending_by_category
+                ],
+                "monthly_trend": [
+                    {"month": m[0], "total": m[1]} for m in monthly_trend
+                ],
+                "insights": insights,
+            },
+        }
+
+    def _get_spending_summary(self):
+        """Get monthly spending summary."""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        # Current month
+        cursor.execute(
+            """
+            SELECT SUM(amount) FROM transactions
+            WHERE type = 'income' AND strftime('%Y-%m', date) = strftime('%Y-%m', 'now')
+        """
+        )
+        income = cursor.fetchone()[0] or 0.0
+
+        cursor.execute(
+            """
+            SELECT SUM(amount) FROM transactions
+            WHERE type = 'expense' AND strftime('%Y-%m', date) = strftime('%Y-%m', 'now')
+        """
+        )
+        expenses = cursor.fetchone()[0] or 0.0
+
+        conn.close()
+
+        surplus = income - expenses
+        status = "surplus" if surplus > 0 else "deficit"
+
+        return {
+            "type": "spending_summary",
+            "content": {
+                "message": "Monthly financial summary",
+                "income": income,
+                "expenses": expenses,
+                "surplus_or_deficit": surplus,
+                "status": status,
+                "savings_rate": (surplus / income * 100) if income > 0 else 0,
+            },
+        }
+
+    def _handle_add_goal(self, query):
+        """Add a financial goal."""
+        # Simple parsing - would be more sophisticated in production
+        parts = query.split()
+
+        try:
+            # Find amount
+            amount = None
+            for part in parts:
+                try:
+                    amount = float(part.replace("$", "").replace(",", ""))
+                    break
+                except ValueError:
+                    continue
+
+            if not amount:
+                return {
+                    "type": "error",
+                    "content": {"message": "Please specify target amount"},
+                }
+
+            # Extract name (words before amount)
+            name = (
+                " ".join([p for p in parts if not any(c.isdigit() for c in p)])[:50]
+                or "Financial Goal"
+            )
+
+            # Default deadline: 1 year from now
+            deadline = (datetime.now() + timedelta(days=365)).isoformat()
+
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            cursor.execute(
+                """
+                INSERT INTO financial_goals (name, target_amount, current_amount, deadline, priority)
+                VALUES (?, ?, ?, ?, ?)
+            """,
+                (name, amount, 0.0, deadline, "medium"),
+            )
+
+            goal_id = cursor.lastrowid
+            conn.commit()
+            conn.close()
+
+            return {
+                "type": "goal_created",
+                "content": {
+                    "message": f"Financial goal created",
+                    "goal": {
+                        "id": goal_id,
+                        "name": name,
+                        "target": amount,
+                        "deadline": deadline,
+                    },
+                },
+            }
+
+        except Exception as e:
+            return {
+                "type": "error",
+                "content": {"message": f"Failed to create goal: {str(e)}"},
+            }
+
+    def _get_goals_status(self):
+        """Get status of all financial goals."""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            "SELECT id, name, target_amount, current_amount, deadline, priority FROM financial_goals"
+        )
+        goals_data = cursor.fetchall()
+
+        goals_status = []
+        for gid, name, target, current, deadline, priority in goals_data:
+            goal = FinancialGoal(gid, name, target, current, deadline, priority)
+
+            goals_status.append(
+                {
+                    "id": gid,
+                    "name": name,
+                    "target": target,
+                    "current": current,
+                    "progress": goal.progress_percentage(),
+                    "remaining": goal.remaining_amount(),
+                    "days_left": goal.days_remaining(),
+                    "priority": priority,
+                    "status": (
+                        "on_track" if goal.progress_percentage() > 0 else "not_started"
+                    ),
+                }
+            )
+
+        conn.close()
+
+        return {
+            "type": "goals_status",
+            "content": {
+                "message": "Financial goals status",
+                "goals": goals_status,
+                "total_goals": len(goals_status),
+            },
+        }
+
+    def _handle_create_grocery_list(self, query):
+        """Create a new grocery list."""
+        # Extract list name
+        name = (
+            query.replace("create grocery list", "")
+            .replace("new grocery list", "")
+            .strip()
+        )
+        if not name:
+            name = f"Shopping List {datetime.now().strftime('%Y-%m-%d')}"
+
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            INSERT INTO grocery_lists (name, created_at, completed)
+            VALUES (?, ?, ?)
+        """,
+            (name, datetime.now().isoformat(), 0),
+        )
+
+        list_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        return {
+            "type": "grocery_list_created",
+            "content": {
+                "message": f"Grocery list created",
+                "list": {
+                    "id": list_id,
+                    "name": name,
+                    "created": datetime.now().isoformat(),
+                },
+            },
+        }
+
+    def _show_grocery_lists(self):
+        """Show all grocery lists."""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            "SELECT id, name, created_at, completed FROM grocery_lists ORDER BY created_at DESC LIMIT 10"
+        )
+        lists = cursor.fetchall()
+
+        conn.close()
+
+        return {
+            "type": "grocery_lists",
+            "content": {
+                "message": "Your grocery lists",
+                "lists": [
+                    {"id": l[0], "name": l[1], "created": l[2], "completed": bool(l[3])}
+                    for l in lists
+                ],
+            },
+        }
+
+    def _provide_financial_advice(self):
+        """Provide personalized financial advice based on spending patterns."""
+        # Get budget status
+        budget_status = self._get_budget_status()
+
+        # Get spending analysis
+        spending_analysis = self._analyze_spending_habits()
+
+        # Get summary
+        summary = self._get_spending_summary()
+
+        advice = []
+
+        # Check for over-budget categories
+        for budget in budget_status["content"]["budgets"]:
+            if budget["status"] == "over":
+                advice.append(
+                    {
+                        "priority": "high",
+                        "category": budget["category"],
+                        "message": f"⚠️ You're over budget on {budget['category']} by ${budget['spent'] - budget['limit']:.2f}",
+                    }
+                )
+
+        # Check for surplus
+        if (
+            summary["content"]["status"] == "surplus"
+            and summary["content"]["surplus_or_deficit"] > 0
+        ):
+            advice.append(
+                {
+                    "priority": "medium",
+                    "category": "savings",
+                    "message": f"✅ You have ${summary['content']['surplus_or_deficit']:.2f} surplus - consider allocating to financial goals",
+                }
+            )
+
+        # Generic advice
+        advice.append(
+            {
+                "priority": "low",
+                "category": "tracking",
+                "message": "💡 Tip: Set up email sync to automatically track transactions",
+            }
+        )
+
+        return {
+            "type": "financial_advice",
+            "content": {
+                "message": "Personalized financial advice",
+                "advice": advice,
+                "summary": summary["content"],
+            },
+        }
+
+    def health(self):
+        """Health check for the plugin."""
+        try:
+            # Check database connection
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM transactions")
+            count = cursor.fetchone()[0]
+            conn.close()
+
+            return {
+                "status": "healthy",
+                "transactions_count": count,
+                "features": {
+                    "manual_entry": "enabled",
+                    "email_sync": "stub_ready",
+                    "budgets": "enabled",
+                    "goals": "enabled",
+                    "grocery_lists": "enabled",
+                },
+            }
+        except Exception as e:
+            return {"status": "error", "detail": str(e)}

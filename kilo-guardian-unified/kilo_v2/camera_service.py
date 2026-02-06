@@ -1,0 +1,549 @@
+"""
+Kilo Guardian - Core Camera Service
+Handles automatic detection and streaming of all available cameras.
+This is a CORE FEATURE, not a plugin.
+"""
+
+import logging
+import os
+import threading
+import time
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+# AI activity recognition import
+from kilo_v2.ai_activity_recognition import get_ai_activity_model
+
+if TYPE_CHECKING:
+    # cv2 may not be available during type checking in some environments
+    import cv2 as _cv2
+
+    VideoCaptureType = _cv2.VideoCapture
+else:
+    VideoCaptureType = Any
+
+try:
+    import cv2
+    import numpy as np
+
+    CV2_AVAILABLE = True
+    # Handle both missing cv2 and NumPy compatibility issues
+except Exception as e:
+    # Handle both missing cv2 and NumPy compatibility issues or a stubbed
+    # cv2 module that does not provide the full API (common in tests).
+    cv2 = None
+    try:
+        import numpy as np
+    except Exception:
+        np = None
+
+    CV2_AVAILABLE = False
+    logger = logging.getLogger("CameraService")
+    logger.warning(f"OpenCV not fully available or incomplete: {e}")
+
+else:
+    # Validate that the imported cv2 exposes the basic API we need. Tests
+    # may inject a stub module without the necessary attributes; treat that
+    # as CV2 unavailable.
+    required_attrs = (
+        "CascadeClassifier",
+        "VideoCapture",
+        "imencode",
+        "putText",
+        "FONT_HERSHEY_SIMPLEX",
+    )
+    for attr in required_attrs:
+        if not hasattr(cv2, attr):
+            logger = logging.getLogger("CameraService")
+            logger.warning(
+                "OpenCV module missing attribute '%s'; disabling CV2 features",
+                attr,
+            )
+            cv2 = None
+            CV2_AVAILABLE = False
+            break
+
+logger = logging.getLogger("CameraService")
+
+
+@dataclass
+class CameraInfo:
+    """Information about a detected camera"""
+
+    id: int
+    name: str
+    is_active: bool
+    resolution: tuple
+    fps: float
+    last_frame_time: float
+    motion_detected: bool = False
+    motion_level: float = 0.0
+    faces_detected: int = 0
+
+
+class CameraService:
+    def __init__(self, max_cameras: int = 4):
+        """
+        Initialize camera service.
+
+        Args:
+            max_cameras: Maximum number of cameras to detect (default 4)
+        """
+        self.max_cameras = max_cameras
+        self.cameras: Dict[int, VideoCaptureType] = {}
+        self.camera_info: Dict[int, CameraInfo] = {}
+        self.mock_frames: Dict[int, int] = {}  # Counter for mock frames
+        self.previous_frames: Dict[int, Any] = {}  # For motion detection
+        self.frame_cache: Dict[int, bytes] = {}
+        # Cache latest frame for multiple viewers
+        self.running = False
+        self._lock = threading.Lock()
+        self.motion_threshold = 25  # Pixel difference threshold
+        self.motion_min_area = 500  # Minimum contour area to count as motion
+
+        # Face detection setup
+        self.face_cascade = None
+        self.face_detection_enabled = True
+        if CV2_AVAILABLE:
+            cascade_path = os.path.join(
+                os.path.dirname(__file__),
+                "models",
+                "haarcascade_frontalface_default.xml",
+            )
+            if os.path.exists(cascade_path):
+                self.face_cascade = cv2.CascadeClassifier(cascade_path)
+                logger.info(f"👤 Face detection model loaded: {cascade_path}")
+            else:
+                logger.warning(
+                    "⚠️ Face detection model not found at %s",
+                    cascade_path,
+                )
+
+        logger.info(
+            "🎥 Camera Service initialized (CV2 available: %s)",
+            CV2_AVAILABLE,
+        )
+
+    def get_activity_label(self, camera_id: int) -> Optional[str]:
+        """
+        Get the current activity label for a camera using the AI model.
+        Returns a string like 'sitting', 'sleeping', 'cooking', etc., or None if unavailable.
+        """
+        if camera_id not in self.cameras:
+            return None
+        cap = self.cameras[camera_id]
+        if not cap.isOpened():
+            return None
+        ret, frame = cap.read()
+        if not ret or frame is None:
+            return None
+        ai_model = get_ai_activity_model()
+        return ai_model.predict_activity(frame)
+
+    def detect_cameras(self) -> List[int]:
+        """
+        Auto-detect all available cameras on the system.
+
+        Returns:
+            List of camera indices that are available
+        """
+        detected = []
+
+        if not CV2_AVAILABLE:
+            logger.warning("⚠️ OpenCV not available - will use mock cameras")
+            # Create mock cameras
+            for i in range(min(2, self.max_cameras)):
+                detected.append(i)
+                self.camera_info[i] = CameraInfo(
+                    id=i,
+                    name=f"Mock Camera {i}",
+                    is_active=True,
+                    resolution=(640, 480),
+                    fps=5.0,
+                    last_frame_time=time.time(),
+                )
+            return detected
+
+        logger.info(
+            "🔍 Scanning for cameras (checking indices 0-%d)...",
+            self.max_cameras - 1,
+        )
+
+        for idx in range(self.max_cameras):
+            try:
+                cap = cv2.VideoCapture(idx)
+                if cap.isOpened():
+                    # Get camera properties
+                    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+
+                    with self._lock:
+                        self.cameras[idx] = cap
+                        self.camera_info[idx] = CameraInfo(
+                            id=idx,
+                            name=f"Camera {idx}",
+                            is_active=True,
+                            resolution=(width, height),
+                            fps=fps,
+                            last_frame_time=time.time(),
+                        )
+
+                    detected.append(idx)
+                    logger.info(
+                        f"✅ Camera {idx} detected: {width}x{height} @ {fps}fps"
+                    )
+                else:
+                    cap.release()
+            except Exception as e:
+                logger.debug(f"Camera {idx} not available: {e}")
+                continue
+
+        if not detected:
+            logger.warning("⚠️ No physical cameras detected - enabling mock cameras")
+            # Create at least one mock camera
+            detected.append(0)
+            self.camera_info[0] = CameraInfo(
+                id=0,
+                name="Mock Camera 0",
+                is_active=True,
+                resolution=(640, 480),
+                fps=5.0,
+                last_frame_time=time.time(),
+            )
+
+        logger.info(
+            f"📷 Camera detection complete: {len(detected)} camera(s) available"
+        )
+        return detected
+
+    def _generate_mock_frame(self, camera_id: int) -> bytes:
+        """Generate a mock JPEG frame for demo purposes."""
+        if camera_id not in self.mock_frames:
+            self.mock_frames[camera_id] = 0
+
+        self.mock_frames[camera_id] += 1
+        counter = self.mock_frames[camera_id]
+
+        # Create frame (fallback if NumPy unavailable)
+        if np is None:
+            return f"MOCK_CAMERA_{camera_id}_FRAME_{counter}".encode()
+
+        img = np.zeros((480, 640, 3), dtype=np.uint8)
+
+        if CV2_AVAILABLE:
+            # Draw camera ID
+            cv2.putText(
+                img,
+                f"CAMERA {camera_id}",
+                (20, 60),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1.5,
+                (0, 255, 0),
+                3,
+            )
+
+            # Draw timestamp
+            timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+            cv2.putText(
+                img,
+                timestamp,
+                (20, 120),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.8,
+                (255, 255, 255),
+                2,
+            )
+
+            # Draw moving indicator
+            x = int((counter % 100) * 5.4)
+            cv2.rectangle(img, (x, 200), (x + 60, 280), (0, 255, 255), -1)
+
+            # Draw status
+            cv2.putText(
+                img,
+                "MOCK FEED - ACTIVE",
+                (20, 450),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (0, 255, 0),
+                2,
+            )
+
+            # Encode to JPEG
+            _, buffer = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 85])
+            return buffer.tobytes()
+        else:
+            # Fallback: return text placeholder
+            return f"MOCK_CAMERA_{camera_id}_FRAME_{counter}".encode()
+
+    def get_frame(self, camera_id: int) -> Optional[bytes]:
+        """
+        Get the latest JPEG frame from a camera with motion detection overlay.
+        Returns cached frame to support multiple simultaneous viewers.
+
+        ⚠️ WORKING CONFIGURATION - VERIFIED DEC 2, 2025 ⚠️
+        The 1-second frame cache is CRITICAL for multi-viewer support.
+        DO NOT modify cache timeout without testing thoroughly!
+
+        Args:
+            camera_id: Camera index
+
+        Returns:
+            JPEG bytes or None if unavailable
+        """
+        with self._lock:
+            info = self.camera_info.get(camera_id)
+            if not info or not info.is_active:
+                return None
+
+            # Return cached frame if available and recent (within 1 second)
+            if camera_id in self.frame_cache:
+                if time.time() - info.last_frame_time < 1.0:
+                    return self.frame_cache[camera_id]
+
+            # Real camera
+            if camera_id in self.cameras:
+                cap = self.cameras[camera_id]
+                if cap.isOpened():
+                    ret, frame = cap.read()
+                    if ret:
+                        info.last_frame_time = time.time()
+
+                        # Apply motion detection
+                        frame = self._detect_motion(camera_id, frame, info)
+
+                        # Apply face detection
+                        frame = self._detect_faces(camera_id, frame, info)
+
+                        _, buffer = cv2.imencode(
+                            ".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 85]
+                        )
+                        frame_bytes = buffer.tobytes()
+
+                        # Cache the frame for other viewers
+                        self.frame_cache[camera_id] = frame_bytes
+                        return frame_bytes
+                    else:
+                        logger.warning(
+                            "⚠️ Camera %d failed to read frame",
+                            camera_id,
+                        )
+                        return None
+
+            # Mock camera - generate and cache
+            mock_frame = self._generate_mock_frame(camera_id)
+            self.frame_cache[camera_id] = mock_frame
+            return mock_frame
+
+    def _detect_motion(self, camera_id: int, frame, info: CameraInfo):
+        """
+        Detect motion in frame and add visual overlay.
+
+        Args:
+            camera_id: Camera index
+            frame: Current frame (BGR numpy array)
+            info: CameraInfo object to update
+
+        Returns:
+            Frame with motion detection overlay
+        """
+        if not CV2_AVAILABLE or frame is None:
+            return frame
+
+        try:
+            # Convert to grayscale for motion detection
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            gray = cv2.GaussianBlur(gray, (21, 21), 0)
+
+            # Get previous frame
+            if camera_id not in self.previous_frames:
+                self.previous_frames[camera_id] = gray
+                return frame
+
+            # Compute difference
+            frame_delta = cv2.absdiff(self.previous_frames[camera_id], gray)
+            thresh = cv2.threshold(
+                frame_delta, self.motion_threshold, 255, cv2.THRESH_BINARY
+            )[1]
+            thresh = cv2.dilate(thresh, None, iterations=2)
+
+            # Find contours
+            contours, _ = cv2.findContours(
+                thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+            )
+
+            motion_detected = False
+            motion_level = 0.0
+
+            for contour in contours:
+                area = cv2.contourArea(contour)
+                if area < self.motion_min_area:
+                    continue
+
+                motion_detected = True
+                motion_level = max(motion_level, area / 10000.0)  # Normalize
+
+                # Draw bounding box
+                (x, y, w, h) = cv2.boundingRect(contour)
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+
+            # Update camera info
+            info.motion_detected = motion_detected
+            info.motion_level = min(motion_level, 1.0)
+
+            # Add motion indicator overlay
+            if motion_detected:
+                cv2.putText(
+                    frame,
+                    "MOTION DETECTED",
+                    (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.8,
+                    (0, 0, 255),
+                    2,
+                )
+                # Draw red border
+                h, w = frame.shape[:2]
+                cv2.rectangle(frame, (0, 0), (w - 1, h - 1), (0, 0, 255), 3)
+
+            # Update previous frame
+            self.previous_frames[camera_id] = gray
+
+            return frame
+
+        except Exception as e:
+            logger.error(f"Motion detection error for camera {camera_id}: {e}")
+            return frame
+
+    def _detect_faces(self, camera_id: int, frame, info: CameraInfo):
+        """
+        Detect faces in frame and add visual overlay.
+
+        Args:
+            camera_id: Camera index
+            frame: Current frame (BGR numpy array)
+            info: CameraInfo object to update
+
+        Returns:
+            Frame with face detection overlay
+        """
+        if (
+            not CV2_AVAILABLE
+            or frame is None
+            or self.face_cascade is None
+            or not self.face_detection_enabled
+        ):
+            return frame
+
+        try:
+            # Convert to grayscale for face detection
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+            # Detect faces
+            faces = self.face_cascade.detectMultiScale(
+                gray,
+                scaleFactor=1.1,
+                minNeighbors=5,
+                minSize=(30, 30),
+                flags=cv2.CASCADE_SCALE_IMAGE,
+            )
+
+            # Update camera info
+            info.faces_detected = len(faces)
+
+            # Draw rectangles around faces
+            for x, y, w, h in faces:
+                # Draw blue rectangle for face
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
+
+                # Add label
+                cv2.putText(
+                    frame,
+                    "Face",
+                    (x, y - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.6,
+                    (255, 0, 0),
+                    2,
+                )
+
+            # Add face count indicator
+            if len(faces) > 0:
+                cv2.putText(
+                    frame,
+                    f"Faces: {len(faces)}",
+                    (10, frame.shape[0] - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
+                    (255, 0, 0),
+                    2,
+                )
+
+            return frame
+
+        except Exception as e:
+            logger.error(f"Face detection error for camera {camera_id}: {e}")
+            return frame
+
+    def get_all_cameras(self) -> Dict[int, CameraInfo]:
+        """Get info for all detected cameras."""
+        with self._lock:
+            return dict(self.camera_info)
+
+    def get_camera_info(self, camera_id: int) -> Optional[CameraInfo]:
+        """Get info for a specific camera."""
+        with self._lock:
+            return self.camera_info.get(camera_id)
+
+    def start(self):
+        """Start the camera service."""
+        if self.running:
+            logger.warning("Camera service already running")
+            return
+
+        self.running = True
+        detected = self.detect_cameras()
+        logger.info(f"🎥 Camera service started with {len(detected)} camera(s)")
+
+    def shutdown(self):
+        """Shutdown camera service and release resources."""
+        logger.info("🛑 Shutting down camera service...")
+        self.running = False
+
+        with self._lock:
+            for idx, cap in self.cameras.items():
+                if cap.isOpened():
+                    cap.release()
+                    logger.info(f"📷 Released camera {idx}")
+
+            self.cameras.clear()
+            self.camera_info.clear()
+
+        logger.info("✅ Camera service shutdown complete")
+
+    def health_check(self) -> dict:
+        """Get service health status."""
+        with self._lock:
+            active_count = sum(
+                1 for info in self.camera_info.values() if info.is_active
+            )
+            return {
+                "status": "operational" if active_count > 0 else "degraded",
+                "cameras_detected": len(self.camera_info),
+                "cameras_active": active_count,
+                "cv2_available": CV2_AVAILABLE,
+            }
+
+
+# Global singleton instance
+_camera_service: Optional[CameraService] = None
+
+
+def get_camera_service() -> CameraService:
+    """Get the global camera service instance."""
+    global _camera_service
+    if _camera_service is None:
+        _camera_service = CameraService()
+        _camera_service.start()
+    return _camera_service

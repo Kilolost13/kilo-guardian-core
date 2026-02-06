@@ -1,0 +1,56 @@
+{
+  "name": "briefing",
+  "version": "1.0.0",
+  "description": "Comprehensive daily briefing aggregating email, calendar, news, weather, banking alerts, life tracking tasks, and home monitoring status.",
+  "author": "Kilo Guardian Team",
+  "isolate": false,
+  "allow_network": true,
+  "requirements": [
+    "feedparser>=6.0.10",
+    "requests>=2.31.0"
+  ],
+  "configuration": {
+    "email": {
+      "imap_server": "imap.gmail.com",
+      "imap_port": 993,
+      "username": "",
+      "password": "",
+      "enabled": false
+    },
+    "calendar": {
+      "provider": "google",
+      "enabled": false
+    },
+    "weather": {
+      "api_key": "",
+      "provider": "openweathermap",
+      "enabled": true
+    },
+    "news": {
+      "sources": [
+        "https://news.ycombinator.com/rss",
+        "https://www.reddit.com/r/technology/.rss",
+        "https://feeds.feedburner.com/TechCrunch/"
+      ],
+      "max_items": 5,
+      "enabled": true
+    },
+    "banking": {
+      "provider": "plaid",
+      "enabled": false
+    },
+    "life_tracking": {
+      "enabled": true
+    },
+    "home_monitoring": {
+      "enabled": true,
+      "door_open_threshold_minutes": 15,
+      "motion_threshold_count": 10
+    }
+  },
+  "integrations": {
+    "wizard_data": true,
+    "life_tracking": true,
+    "security_monitor": true
+  }
+}

@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPN Manager - Kilo Guardian</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #00ff88;
+            overflow-x: hidden;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .header {
+            background: #0a0a0a;
+            border: 2px solid #00ff88;
+            padding: 20px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+
+        .header h1 {
+            font-size: 28px;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid #00ff88;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .status-light {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #00ff88;
+            box-shadow: 0 0 10px #00ff88;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .status-light.inactive {
+            background: #666;
+            box-shadow: none;
+            animation: none;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .panel {
+            background: #0a0a0a;
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+
+        .panel-header {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #00ff88;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background: rgba(0, 255, 136, 0.05);
+            border: 1px solid #00ff88;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #00ff88;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            background: rgba(0, 255, 136, 0.1);
+            border: 2px solid #00ff88;
+            border-radius: 6px;
+            color: #00ff88;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 5px;
+            text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover:not(:disabled) {
+            background: rgba(0, 255, 136, 0.3);
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-danger {
+            border-color: #ff0055;
+            color: #ff0055;
+            background: rgba(255, 0, 85, 0.1);
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: rgba(255, 0, 85, 0.3);
+            box-shadow: 0 0 15px rgba(255, 0, 85, 0.5);
+        }
+
+        .peers-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .peer-item {
+            background: rgba(0, 255, 136, 0.05);
+            border: 1px solid #00ff88;
+            border-radius: 6px;
+            padding: 15px;
+            transition: all 0.3s;
+        }
+
+        .peer-item:hover {
+            background: rgba(0, 255, 136, 0.1);
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+        }
+
+        .peer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .peer-name {
+            font-size: 16px;
+            font-weight: bold;
+            color: #00ff88;
+        }
+
+        .peer-status {
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        .peer-status.online {
+            background: rgba(0, 255, 136, 0.3);
+            color: #00ff88;
+            border: 1px solid #00ff88;
+        }
+
+        .peer-status.offline {
+            background: rgba(102, 102, 102, 0.3);
+            color: #666;
+            border: 1px solid #666;
+        }
+
+        .peer-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 10px;
+        }
+
+        .peer-detail {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .peer-detail-label {
+            color: #666;
+        }
+
+        .peer-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #888;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            background: #000;
+            border: 1px solid #00ff88;
+            border-radius: 4px;
+            color: #00ff88;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        .form-input:focus {
+            outline: none;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
+        .qr-code-container {
+            text-align: center;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .config-box {
+            background: #000;
+            border: 1px solid #00ff88;
+            border-radius: 4px;
+            padding: 15px;
+            font-size: 12px;
+            color: #00ff88;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #0a0a0a;
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #00ff88;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #00ff88;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert.success {
+            background: rgba(0, 255, 136, 0.2);
+            border: 1px solid #00ff88;
+            color: #00ff88;
+        }
+
+        .alert.error {
+            background: rgba(255, 0, 85, 0.2);
+            border: 1px solid #ff0055;
+            color: #ff0055;
+        }
+
+        .alert.warning {
+            background: rgba(255, 170, 0, 0.2);
+            border: 1px solid #ffaa00;
+            color: #ffaa00;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #000;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <i class="fas fa-shield-alt"></i>
+                VPN MANAGEMENT
+            </h1>
+            <div class="status-badge">
+                <div class="status-light" id="serverStatusLight"></div>
+                <span id="serverStatusText">Checking...</span>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Server Control Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <i class="fas fa-server"></i>
+                    VPN Server Control
+                </div>
+
+                <div id="serverAlert"></div>
+
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-label">Server Status</div>
+                        <div class="stat-value" id="serverStatus">-</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Active Peers</div>
+                        <div class="stat-value" id="activePeers">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Total Peers</div>
+                        <div class="stat-value" id="totalPeers">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Server Port</div>
+                        <div class="stat-value" id="serverPort">51820</div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <button class="btn" onclick="setupServer()" id="setupBtn">
+                        <i class="fas fa-cog"></i> Setup Server
+                    </button>
+                    <button class="btn" onclick="restartServer()" id="restartBtn">
+                        <i class="fas fa-sync"></i> Restart Server
+                    </button>
+                    <button class="btn btn-danger" onclick="stopServer()" id="stopBtn">
+                        <i class="fas fa-stop"></i> Stop Server
+                    </button>
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <button class="btn" onclick="showAddPeerModal()">
+                        <i class="fas fa-plus"></i> Add New Peer
+                    </button>
+                    <button class="btn" onclick="refreshData()">
+                        <i class="fas fa-refresh"></i> Refresh
+                    </button>
+                </div>
+            </div>
+
+            <!-- Server Info Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <i class="fas fa-info-circle"></i>
+                    Server Information
+                </div>
+
+                <div class="form-group">
+                    <div class="form-label">Server Public Key</div>
+                    <div class="config-box" id="serverPublicKey">Not configured</div>
+                </div>
+
+                <div class="form-group">
+                    <div class="form-label">Server Endpoint</div>
+                    <div class="config-box" id="serverEndpoint">Not configured</div>
+                </div>
+
+                <div class="form-group">
+                    <div class="form-label">Network Range</div>
+                    <div class="config-box" id="networkRange">10.8.0.0/24</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Peers Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                <i class="fas fa-users"></i>
+                Connected Peers
+            </div>
+
+            <div class="peers-list" id="peersList">
+                <div class="loading">
+                    <i class="fas fa-spinner fa-spin"></i> Loading peers...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Peer Modal -->
+    <div class="modal" id="addPeerModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New VPN Peer</h2>
+                <button class="modal-close" onclick="closeModal('addPeerModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div id="addPeerAlert"></div>
+
+            <form onsubmit="addPeer(event)">
+                <div class="form-group">
+                    <label class="form-label" for="peerName">Peer Name *</label>
+                    <input type="text" id="peerName" class="form-input" required
+                        placeholder="e.g., laptop-home, phone-john">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="peerEmail">Email (Optional)</label>
+                    <input type="email" id="peerEmail" class="form-input" placeholder="user@example.com">
+                </div>
+
+                <button type="submit" class="btn" style="width: 100%;">
+                    <i class="fas fa-plus"></i> Create Peer
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Peer Config Modal -->
+    <div class="modal" id="peerConfigModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Peer Configuration</h2>
+                <button class="modal-close" onclick="closeModal('peerConfigModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div id="peerConfigContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = window.location.origin;
+        const API_KEY = 'kilo-dev-key-2025';
+
+        let serverStatus = null;
+        let peers = [];
+
+        async function refreshData() {
+            await Promise.all([
+                loadServerStatus(),
+                loadPeers()
+            ]);
+        }
+
+        async function loadServerStatus() {
+            try {
+                const response = await fetch(API_BASE_URL + '/api/vpn/server/status', {
+                    headers: { 'X-API-Key': API_KEY }
+                });
+
+                if (response.ok) {
+                    serverStatus = await response.json();
+                    updateServerUI();
+                } else {
+                    showServerAlert('Server not configured. Click "Setup Server" to initialize.', 'warning');
+                    document.getElementById('serverStatus').textContent = 'OFF';
+                    document.getElementById('serverStatusText').textContent = 'Not Configured';
+                    document.getElementById('serverStatusLight').classList.add('inactive');
+                }
+            } catch (error) {
+                console.error('Error loading server status:', error);
+                showServerAlert('Failed to connect to VPN server', 'error');
+            }
+        }
+
+        async function loadPeers() {
+            try {
+                const response = await fetch(API_BASE_URL + '/api/vpn/server/peers', {
+                    headers: { 'X-API-Key': API_KEY }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    peers = data.peers || [];
+                    updatePeersUI();
+                }
+            } catch (error) {
+                console.error('Error loading peers:', error);
+            }
+        }
+
+        function updateServerUI() {
+            if (!serverStatus) return;
+
+            document.getElementById('serverStatus').textContent = serverStatus.running ? 'ON' : 'OFF';
+            document.getElementById('activePeers').textContent = serverStatus.active_peers || 0;
+            document.getElementById('totalPeers').textContent = serverStatus.total_peers || 0;
+            document.getElementById('serverPort').textContent = serverStatus.port || 51820;
+
+            document.getElementById('serverStatusText').textContent =
+                serverStatus.running ? 'Running' : 'Stopped';
+
+            if (serverStatus.running) {
+                document.getElementById('serverStatusLight').classList.remove('inactive');
+            } else {
+                document.getElementById('serverStatusLight').classList.add('inactive');
+            }
+
+            if (serverStatus.server_public_key) {
+                document.getElementById('serverPublicKey').textContent = serverStatus.server_public_key;
+            }
+
+            if (serverStatus.endpoint) {
+                document.getElementById('serverEndpoint').textContent = serverStatus.endpoint;
+            }
+        }
+
+        function updatePeersUI() {
+            const peersList = document.getElementById('peersList');
+
+            if (peers.length === 0) {
+                peersList.innerHTML = '<div class="loading">No peers configured</div>';
+                return;
+            }
+
+            peersList.innerHTML = peers.map(peer => `
+                <div class="peer-item">
+                    <div class="peer-header">
+                        <div class="peer-name">${peer.name || 'Unnamed'}</div>
+                        <div class="peer-status ${peer.connected ? 'online' : 'offline'}">
+                            ${peer.connected ? 'Online' : 'Offline'}
+                        </div>
+                    </div>
+                    <div class="peer-details">
+                        <div class="peer-detail">
+                            <span class="peer-detail-label">IP:</span>
+                            <span>${peer.ip_address || 'N/A'}</span>
+                        </div>
+                        <div class="peer-detail">
+                            <span class="peer-detail-label">Created:</span>
+                            <span>${peer.created_at ? new Date(peer.created_at).toLocaleDateString() : 'N/A'}</span>
+                        </div>
+                        <div class="peer-detail">
+                            <span class="peer-detail-label">Last Seen:</span>
+                            <span>${peer.last_handshake || 'Never'}</span>
+                        </div>
+                        <div class="peer-detail">
+                            <span class="peer-detail-label">Data:</span>
+                            <span>${formatBytes(peer.transfer_rx || 0)} ↓ ${formatBytes(peer.transfer_tx || 0)} ↑</span>
+                        </div>
+                    </div>
+                    <div class="peer-actions">
+                        <button class="btn btn-small" onclick="showPeerConfig('${peer.public_key}')">
+                            <i class="fas fa-qrcode"></i> Config
+                        </button>
+                        <button class="btn btn-small btn-danger" onclick="removePeer('${peer.public_key}', '${peer.name}')">
+                            <i class="fas fa-trash"></i> Remove
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function setupServer() {
+            if (!confirm('Initialize VPN server? This will configure WireGuard.')) return;
+
+            try {
+                showServerAlert('Setting up server...', 'warning');
+                const response = await fetch(API_BASE_URL + '/api/vpn/server/setup', {
+                    method: 'POST',
+                    headers: { 'X-API-Key': API_KEY }
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    showServerAlert('Server setup successful!', 'success');
+                    await refreshData();
+                } else if (data.upgrade_required) {
+                    showUpgradePrompt('VPN Server', data.upgrade_info || {
+                        message: 'VPN Server requires a paid subscription',
+                        tier: 'Pro or Enterprise',
+                        price: 'Starting at $29/month'
+                    });
+                } else {
+                    showServerAlert(data.error || 'Setup failed', 'error');
+                }
+            } catch (error) {
+                showServerAlert('Setup failed: ' + error.message, 'error');
+            }
+        }
+
+        async function restartServer() {
+            showServerAlert('Restart functionality coming soon', 'warning');
+        }
+
+        async function stopServer() {
+            showServerAlert('Stop functionality coming soon', 'warning');
+        }
+
+        function showAddPeerModal() {
+            document.getElementById('addPeerModal').classList.add('active');
+            document.getElementById('peerName').value = '';
+            document.getElementById('peerEmail').value = '';
+            document.getElementById('addPeerAlert').innerHTML = '';
+        }
+
+        async function addPeer(event) {
+            event.preventDefault();
+
+            const name = document.getElementById('peerName').value;
+            const email = document.getElementById('peerEmail').value;
+
+            try {
+                showAddPeerAlert('Creating peer...', 'warning');
+
+                const response = await fetch(API_BASE_URL + '/api/vpn/server/peers', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': API_KEY
+                    },
+                    body: JSON.stringify({ name, email })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    showAddPeerAlert('Peer created successfully!', 'success');
+                    await refreshData();
+                    setTimeout(() => {
+                        closeModal('addPeerModal');
+                        if (data.public_key) {
+                            showPeerConfig(data.public_key);
+                        }
+                    }, 1000);
+                } else if (data.upgrade_required) {
+                    closeModal('addPeerModal');
+                    showUpgradePrompt('VPN Peers', data.upgrade_info || {
+                        message: 'Peer limit reached. Upgrade to add more peers.',
+                        tier: 'Pro or Enterprise',
+                        limits: {
+                            free: '3 peers',
+                            pro: '25 peers',
+                            enterprise: 'Unlimited peers'
+                        }
+                    });
+                } else {
+                    showAddPeerAlert(data.error || 'Failed to create peer', 'error');
+                }
+            } catch (error) {
+                showAddPeerAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function removePeer(publicKey, name) {
+            if (!confirm(`Remove peer "${name}"?`)) return;
+
+            try {
+                const response = await fetch(API_BASE_URL + `/api/vpn/server/peers/${encodeURIComponent(publicKey)}`, {
+                    method: 'DELETE',
+                    headers: { 'X-API-Key': API_KEY }
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    showServerAlert('Peer removed successfully', 'success');
+                    await refreshData();
+                } else {
+                    showServerAlert(data.error || 'Failed to remove peer', 'error');
+                }
+            } catch (error) {
+                showServerAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        function showPeerConfig(publicKey) {
+            const peer = peers.find(p => p.public_key === publicKey);
+            if (!peer) return;
+
+            const content = document.getElementById('peerConfigContent');
+
+            let html = '<div class="alert warning"><i class="fas fa-info-circle"></i> Save this configuration - you won\'t be able to retrieve it later!</div>';
+
+            if (peer.config) {
+                html += `
+                    <div class="form-group">
+                        <div class="form-label">WireGuard Configuration</div>
+                        <div class="config-box">${peer.config}</div>
+                        <button class="btn" style="width: 100%; margin-top: 10px;" onclick="copyConfig('${publicKey}')">
+                            <i class="fas fa-copy"></i> Copy Configuration
+                        </button>
+                    </div>
+                `;
+            }
+
+            if (peer.qr_code) {
+                html += `
+                    <div class="form-group">
+                        <div class="form-label">QR Code (Scan with WireGuard App)</div>
+                        <div class="qr-code-container">
+                            <img src="${peer.qr_code}" alt="QR Code" style="max-width: 100%;">
+                        </div>
+                    </div>
+                `;
+            }
+
+            content.innerHTML = html;
+            document.getElementById('peerConfigModal').classList.add('active');
+        }
+
+        function copyConfig(publicKey) {
+            const peer = peers.find(p => p.public_key === publicKey);
+            if (peer && peer.config) {
+                navigator.clipboard.writeText(peer.config);
+                showServerAlert('Configuration copied to clipboard!', 'success');
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function showServerAlert(message, type) {
+            const alert = document.getElementById('serverAlert');
+            alert.innerHTML = `<div class="alert ${type}"><i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i> ${message}</div>`;
+            setTimeout(() => {
+                if (type !== 'error') alert.innerHTML = '';
+            }, 5000);
+        }
+
+        function showAddPeerAlert(message, type) {
+            const alert = document.getElementById('addPeerAlert');
+            alert.innerHTML = `<div class="alert ${type}"><i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i> ${message}</div>`;
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        function showUpgradePrompt(feature, upgradeInfo) {
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.id = 'upgradeModal';
+
+            const limitsHTML = upgradeInfo.limits ? `
+                <div style="margin: 20px 0; padding: 15px; background: rgba(0,255,136,0.05); border: 1px solid #00ff88; border-radius: 6px;">
+                    <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px; color: #00ff88;">PLAN LIMITS</div>
+                    ${Object.entries(upgradeInfo.limits).map(([plan, limit]) => `
+                        <div style="display: flex; justify-content: space-between; margin: 5px 0; font-size: 13px;">
+                            <span style="text-transform: uppercase; color: #888;">${plan}:</span>
+                            <span style="color: #00ff88;">${limit}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            ` : '';
+
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 500px;">
+                    <div class="modal-header">
+                        <h2><i class="fas fa-lock"></i> Subscription Required</h2>
+                        <button class="modal-close" onclick="closeUpgradeModal()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="alert warning">
+                        <i class="fas fa-star"></i>
+                        <strong>${feature}</strong> is a premium feature
+                    </div>
+
+                    <div style="margin: 20px 0; font-size: 14px; line-height: 1.6; color: #888;">
+                        ${upgradeInfo.message || 'This feature requires an active paid subscription to use.'}
+                    </div>
+
+                    ${limitsHTML}
+
+                    <div style="margin: 20px 0; padding: 15px; background: rgba(0,255,136,0.1); border: 2px solid #00ff88; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 12px; color: #888; margin-bottom: 5px;">REQUIRED TIER</div>
+                        <div style="font-size: 20px; font-weight: bold; color: #00ff88; margin-bottom: 10px;">
+                            ${upgradeInfo.tier || 'Pro or Enterprise'}
+                        </div>
+                        <div style="font-size: 14px; color: #888;">
+                            ${upgradeInfo.price || 'Starting at $29/month'}
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <button class="btn" onclick="window.open('https://bastion-ai.com/pricing', '_blank')">
+                            <i class="fas fa-external-link-alt"></i> View Plans
+                        </button>
+                        <button class="btn" onclick="openSubscriptionManager()">
+                            <i class="fas fa-credit-card"></i> Manage Subscription
+                        </button>
+                    </div>
+
+                    <div style="margin-top: 15px; text-align: center;">
+                        <button class="btn btn-small" onclick="closeUpgradeModal()" style="opacity: 0.7;">
+                            <i class="fas fa-times"></i> Close
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+        }
+
+        function closeUpgradeModal() {
+            const modal = document.getElementById('upgradeModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        function openSubscriptionManager() {
+            // Try to open subscription manager or redirect to billing
+            const billingUrl = API_BASE_URL + '/api/billing/portal';
+
+            fetch(billingUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': API_KEY
+                }
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.url) {
+                        window.open(data.url, '_blank');
+                    } else {
+                        // Fallback to pricing page
+                        window.open('https://bastion-ai.com/pricing', '_blank');
+                    }
+                })
+                .catch(() => {
+                    // Fallback to pricing page
+                    window.open('https://bastion-ai.com/pricing', '_blank');
+                });
+
+            closeUpgradeModal();
+        }
+
+        // Initialize
+        refreshData();
+        setInterval(refreshData, 10000);
+    </script>
+</body>
+
+</html>

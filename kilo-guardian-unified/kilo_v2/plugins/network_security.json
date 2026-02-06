@@ -1,0 +1,20 @@
+{
+  "name": "network_security",
+  "version": "1.0.0",
+  "description": "Network device monitoring, port scanning, CVE checking, and IoT security",
+  "author": "Kilo Guardian",
+  "isolate": true,
+  "requires_sandbox": false,
+  "requirements": [],
+  "permissions": [
+    "network",
+    "subprocess"
+  ],
+  "configuration": {
+    "scan_interval_minutes": 5,
+    "common_ports": [21, 22, 23, 80, 443, 3389, 8080, 8443]
+  },
+  "integrations": {
+    "browser_extension": "Provides backend for browser extension network monitoring"
+  }
+}

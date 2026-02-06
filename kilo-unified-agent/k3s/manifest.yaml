@@ -1,0 +1,99 @@
+# ---------------------------------------------------------------------------
+# Kilo Unified Agent  --  k3s manifest (all-in-one)
+# Apply:  kubectl apply -f k3s/manifest.yaml
+# ---------------------------------------------------------------------------
+# Prerequisites
+#   1. Image built:  docker build -t kilo/unified-agent:latest .
+#   2. kubeconfig Secret exists (or adjust volume source)
+#      kubectl create secret generic kube-config \
+#        --from-file=config=$HOME/.kube/config \
+#        -n kilo-guardian --dry-run=client -o yaml | kubectl apply -f -
+# ---------------------------------------------------------------------------
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kilo-unified-agent
+  namespace: kilo-guardian
+  labels:
+    app: kilo-unified-agent
+    component: control-plane
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kilo-unified-agent
+  template:
+    metadata:
+      labels:
+        app: kilo-unified-agent
+        component: control-plane
+    spec:
+      containers:
+        - name: unified-agent
+          image: kilo/unified-agent:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9200
+              name: http
+          envFrom:
+            - configMapRef:
+                name: kilo-config
+          volumeMounts:
+            - name: kube-cfg
+              mountPath: /root/.kube
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 9200
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 9200
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu:    "100m"
+              memory: "128Mi"
+            limits:
+              cpu:    "500m"
+              memory: "512Mi"
+      volumes:
+        - name: kube-cfg
+          secret:
+            secretName: kube-config
+---
+# ClusterIP  -- internal access from other pods
+apiVersion: v1
+kind: Service
+metadata:
+  name: kilo-unified-agent
+  namespace: kilo-guardian
+spec:
+  type: ClusterIP
+  selector:
+    app: kilo-unified-agent
+  ports:
+    - name: http
+      port: 9200
+      targetPort: 9200
+---
+# NodePort  -- access from host / tablet without port-forward
+apiVersion: v1
+kind: Service
+metadata:
+  name: kilo-unified-agent-np
+  namespace: kilo-guardian
+spec:
+  type: NodePort
+  selector:
+    app: kilo-unified-agent
+  ports:
+    - name: http
+      port: 9200
+      targetPort: 9200
+      nodePort: 30920

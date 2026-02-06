@@ -1,0 +1,7 @@
+# ML and heavy dependencies (optional, install with build-arg INSTALL_ML=true)
+# Note: these can be large and may require additional system libs (GLIBC, CUDA for GPU builds, etc.)
+numpy==1.26.4
+torch==2.2.0
+transformers==4.35.2
+sentence-transformers==2.2.2
+faiss-cpu==1.7.4

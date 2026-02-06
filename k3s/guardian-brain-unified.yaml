@@ -1,0 +1,76 @@
+# ---------------------------------------------------------------------------
+# Kilo Guardian & AI Brain -- Shared State & Intelligence
+# ---------------------------------------------------------------------------
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kilo-ai-brain
+  namespace: kilo-guardian
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kilo-ai-brain
+  template:
+    metadata:
+      labels:
+        app: kilo-ai-brain
+    spec:
+      containers:
+      - name: ai-brain
+        image: kilo/ai_brain:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 9004
+        envFrom:
+        - configMapRef: {name: kilo-config}
+        volumeMounts:
+        - name: shared-data
+          mountPath: /app/kilo_data
+        readinessProbe:
+          httpGet: {path: /health, port: 9004}
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      volumes:
+      - name: shared-data
+        persistentVolumeClaim:
+          claimName: shared-kilo-data
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kilo-guardian
+  namespace: kilo-guardian
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kilo-guardian
+  template:
+    metadata:
+      labels:
+        app: kilo-guardian
+    spec:
+      containers:
+      - name: guardian
+        image: kilo/guardian:latest
+        imagePullPolicy: IfNotPresent
+        workingDir: /app
+        # Run original guardian process
+        command: ["python3", "-m", "kilo_v2.guardian_process"]
+        ports:
+        - containerPort: 8001
+        envFrom:
+        - configMapRef:
+            name: kilo-guardian-config
+        env:
+        - name: AI_BRAIN_URL
+          value: "http://kilo-ai-brain:9004"
+        volumeMounts:
+        - name: shared-data
+          mountPath: /app/kilo_data
+      volumes:
+      - name: shared-data
+        persistentVolumeClaim:
+          claimName: shared-kilo-data

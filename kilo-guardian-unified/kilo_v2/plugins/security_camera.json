@@ -1,0 +1,6 @@
+{
+  "name": "security_camera",
+  "version": "0.9",
+  "description": "Security camera plugin (mock/physical) — runs background capture and mock analysis",
+  "isolate": false
+}

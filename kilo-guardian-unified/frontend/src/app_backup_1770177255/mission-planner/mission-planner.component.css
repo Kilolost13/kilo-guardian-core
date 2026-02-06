@@ -1,0 +1,546 @@
+/* Mission Planner Modal - Steampunk Theme */
+.mission-planner-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(5px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.mission-planner-modal {
+    width: 95%;
+    max-width: 1400px;
+    height: 90vh;
+    background: linear-gradient(145deg, #1a1a1a, #0d0d0d);
+    border: 3px solid #00ff41;
+    border-radius: 12px;
+    box-shadow:
+        0 0 30px rgba(0, 255, 65, 0.5),
+        inset 0 0 50px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* === Header === */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 30px;
+    background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+    border-bottom: 2px solid #00ff41;
+}
+
+.modal-title {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-size: 28px;
+    font-weight: bold;
+    color: #00ff41;
+    text-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+    letter-spacing: 3px;
+    margin: 0;
+}
+
+.title-icon {
+    font-size: 32px;
+    animation: pulse 2s infinite;
+}
+
+.close-button {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+    border: 2px solid #ff0000;
+    border-radius: 50%;
+    color: #ff0000;
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.close-button:hover {
+    background: linear-gradient(145deg, #ff0000, #cc0000);
+    color: #fff;
+    transform: rotate(90deg);
+    box-shadow: 0 0 20px rgba(255, 0, 0, 0.6);
+}
+
+/* === Content === */
+.modal-content {
+    flex: 1;
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+    overflow: hidden;
+}
+
+/* === Map Section === */
+.map-section {
+    flex: 2;
+    position: relative;
+    border: 2px solid #00ff41;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+}
+
+.map-container {
+    width: 100%;
+    height: 100%;
+    background: #000;
+}
+
+/* Map Controls Overlay */
+.map-controls {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 10;
+}
+
+.control-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 15px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid #00ff41;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #00ff41;
+}
+
+.control-group label {
+    font-weight: bold;
+    min-width: 70px;
+}
+
+.altitude-input,
+.time-input {
+    width: 80px;
+    padding: 5px 10px;
+    background: #1a1a1a;
+    border: 1px solid #00ff41;
+    border-radius: 4px;
+    color: #00ff41;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    text-align: center;
+}
+
+.altitude-input:focus,
+.time-input:focus {
+    outline: none;
+    box-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+}
+
+.map-control-btn {
+    padding: 8px 16px;
+    background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+    border: 2px solid #00ff41;
+    border-radius: 6px;
+    color: #00ff41;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.map-control-btn:hover {
+    background: linear-gradient(145deg, #3a3a3a, #2a2a2a);
+    box-shadow: 0 0 15px rgba(0, 255, 65, 0.5);
+    transform: translateY(-2px);
+}
+
+.btn-icon {
+    font-size: 16px;
+}
+
+/* Waypoint Counter */
+.waypoint-counter {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid #00ff41;
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0, 255, 65, 0.3);
+    z-index: 10;
+}
+
+.counter-icon {
+    font-size: 24px;
+}
+
+.counter-value {
+    font-size: 32px;
+    font-weight: bold;
+    color: #00ff41;
+    text-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+    min-width: 40px;
+    text-align: center;
+}
+
+.counter-label {
+    font-size: 12px;
+    color: #00ff41;
+    letter-spacing: 1px;
+    opacity: 0.8;
+}
+
+/* === Presets Panel === */
+.presets-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 2px solid #00ff41;
+    border-radius: 8px;
+    overflow-y: auto;
+}
+
+.panel-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: #00ff41;
+    text-align: center;
+    letter-spacing: 2px;
+    margin: 0 0 15px 0;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #00ff41;
+}
+
+.presets-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+.preset-card {
+    padding: 15px;
+    background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+    border: 2px solid #00ff41;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+}
+
+.preset-card:hover {
+    background: linear-gradient(145deg, #3a3a3a, #2a2a2a);
+    box-shadow: 0 0 20px rgba(0, 255, 65, 0.4);
+    transform: translateY(-3px);
+}
+
+.preset-card.selected {
+    background: rgba(0, 255, 65, 0.2);
+    box-shadow: 0 0 30px rgba(0, 255, 65, 0.6);
+    border-color: #00ff41;
+    animation: zombie-glow 1.5s infinite;
+}
+
+.preset-icon {
+    font-size: 36px;
+}
+
+.preset-name {
+    font-size: 16px;
+    font-weight: bold;
+    color: #00ff41;
+    letter-spacing: 1px;
+}
+
+.preset-description {
+    font-size: 12px;
+    color: #00ff41;
+    opacity: 0.7;
+    line-height: 1.4;
+}
+
+/* Preset Options */
+.preset-options {
+    margin-top: 15px;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 2px solid #00ff41;
+    border-radius: 8px;
+}
+
+.preset-options h4 {
+    font-size: 14px;
+    color: #00ff41;
+    margin: 0 0 12px 0;
+    text-align: center;
+}
+
+.size-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.size-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #00ff41;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.size-option:hover {
+    background: rgba(0, 255, 65, 0.1);
+}
+
+.size-option input[type="radio"] {
+    accent-color: #00ff41;
+}
+
+.size-option span {
+    color: #00ff41;
+    font-size: 14px;
+}
+
+.checkin-scheduler {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+}
+
+.checkin-scheduler label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #00ff41;
+    font-size: 14px;
+}
+
+.schedule-btn {
+    padding: 10px 20px;
+    background: linear-gradient(145deg, #00cc33, #00ff41);
+    border: 2px solid #00ff41;
+    border-radius: 6px;
+    color: #000;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.schedule-btn:hover {
+    box-shadow: 0 0 20px rgba(0, 255, 65, 0.8);
+    transform: scale(1.05);
+}
+
+/* Manual Instructions */
+.manual-instructions {
+    padding: 15px;
+    background: rgba(0, 255, 65, 0.1);
+    border: 2px solid #00ff41;
+    border-radius: 8px;
+    color: #00ff41;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.manual-instructions p {
+    margin: 8px 0;
+}
+
+.manual-instructions strong {
+    color: #00ff41;
+    text-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
+}
+
+/* === Footer === */
+.modal-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 30px;
+    background: linear-gradient(180deg, #1a1a1a 0%, #2a2a2a 100%);
+    border-top: 2px solid #00ff41;
+}
+
+.footer-info {
+    flex: 1;
+}
+
+.info-text {
+    font-size: 14px;
+    color: #00ff41;
+    font-weight: bold;
+}
+
+.info-text.warning {
+    color: #ffaa00;
+}
+
+.footer-actions {
+    display: flex;
+    gap: 15px;
+}
+
+.action-button {
+    padding: 12px 30px;
+    background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+    border: 2px solid #00ff41;
+    border-radius: 8px;
+    color: #00ff41;
+    font-size: 16px;
+    font-weight: bold;
+    font-family: 'Courier New', monospace;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.action-button:hover:not(:disabled) {
+    background: linear-gradient(145deg, #3a3a3a, #2a2a2a);
+    box-shadow: 0 0 20px rgba(0, 255, 65, 0.5);
+    transform: translateY(-2px);
+}
+
+.action-button:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    border-color: #444;
+    color: #444;
+}
+
+.action-button.cancel {
+    border-color: #ff0000;
+    color: #ff0000;
+}
+
+.action-button.cancel:hover {
+    box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+}
+
+.action-button.execute {
+    background: linear-gradient(145deg, #00cc33, #00ff41);
+    border-color: #00ff41;
+    color: #000;
+}
+
+.action-button.execute:hover:not(:disabled) {
+    box-shadow: 0 0 30px rgba(0, 255, 65, 0.8);
+}
+
+/* === Responsive Design === */
+@media (max-width: 1200px) {
+    .modal-content {
+        flex-direction: column;
+    }
+
+    .map-section {
+        min-height: 400px;
+    }
+
+    .presets-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .mission-planner-modal {
+        width: 100%;
+        height: 100vh;
+        border-radius: 0;
+    }
+
+    .modal-title {
+        font-size: 20px;
+    }
+
+    .presets-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .footer-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .action-button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Animations */
+@keyframes zombie-glow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 20px rgba(0, 255, 65, 0.5);
+    }
+
+    50% {
+        box-shadow: 0 0 40px rgba(0, 255, 65, 0.8);
+    }
+}

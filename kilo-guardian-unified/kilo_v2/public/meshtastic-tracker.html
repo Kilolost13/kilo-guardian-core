@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meshtastic Tracker - Kilo Guardian</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #00ff88;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .header {
+            background: #0a0a0a;
+            border: 2px solid #00ff88;
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
+        .status {
+            padding: 8px 16px;
+            background: rgba(0, 255, 136, 0.2);
+            border: 1px solid #00ff88;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .main-content {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 20px;
+            overflow: hidden;
+        }
+
+        .map-panel {
+            background: #0a0a0a;
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+
+        .map-container {
+            flex: 1;
+            background: #000;
+            border: 1px solid #00ff88;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .map-placeholder {
+            color: #666;
+            font-size: 18px;
+            text-align: center;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .devices-panel {
+            background: #0a0a0a;
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow-y: auto;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+
+        .device-section {
+            border-bottom: 1px solid #00ff88;
+            padding-bottom: 15px;
+        }
+
+        .device-section:last-child {
+            border-bottom: none;
+        }
+
+        .device-section h3 {
+            margin-bottom: 10px;
+            font-size: 16px;
+            color: #00ff88;
+        }
+
+        .device-item {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid #00ff88;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 8px 0;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .device-item:hover {
+            background: rgba(0, 255, 136, 0.2);
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+        }
+
+        .device-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .device-name {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .device-id {
+            font-size: 11px;
+            color: #666;
+        }
+
+        .device-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-size: 12px;
+        }
+
+        .device-stat {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .device-stat-label {
+            color: #666;
+        }
+
+        .battery-high {
+            color: #00ff88;
+        }
+
+        .battery-medium {
+            color: #ffaa00;
+        }
+
+        .battery-low {
+            color: #ff0055;
+        }
+
+        .button {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0, 255, 136, 0.1);
+            border: 2px solid #00ff88;
+            border-radius: 6px;
+            color: #00ff88;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 5px 0;
+            text-transform: uppercase;
+        }
+
+        .button:hover {
+            background: rgba(0, 255, 136, 0.3);
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .stat-box {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid #00ff88;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            color: #666;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .log-area {
+            background: #000;
+            border: 1px solid #00ff88;
+            border-radius: 4px;
+            padding: 10px;
+            height: 120px;
+            overflow-y: auto;
+            font-size: 11px;
+            color: #666;
+        }
+
+        .log-entry {
+            margin: 2px 0;
+            font-family: monospace;
+        }
+
+        .log-entry.success {
+            color: #00ff88;
+        }
+
+        .log-entry.error {
+            color: #ff0055;
+        }
+
+        .log-entry.info {
+            color: #00bfff;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>📡 MESHTASTIC DEVICE TRACKER</h1>
+            <div class="status" id="connectionStatus">
+                <span id="statusText">CONNECTING...</span>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Map Panel -->
+            <div class="map-panel">
+                <h3 style="margin-bottom: 15px;">DEVICE MAP</h3>
+                <div class="map-container">
+                    <div class="map-placeholder" id="mapPlaceholder">
+                        [ MAP VIEW ]<br>
+                        <small style="color: #444;">Mesh devices will appear here</small>
+                        <br><br>
+                        <div style="color: #00ff88; font-size: 14px;">
+                            Demo Mode Active<br>
+                            <small style="color: #666;">Connect Meshtastic radio for live tracking</small>
+                        </div>
+                    </div>
+                    <div id="map" style="display: none;"></div>
+                </div>
+            </div>
+
+            <!-- Devices Panel -->
+            <div class="devices-panel">
+                <!-- Stats -->
+                <div class="device-section">
+                    <h3>NETWORK STATS</h3>
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <div class="stat-label">Devices</div>
+                            <div class="stat-value" id="deviceCount">0</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Active</div>
+                            <div class="stat-value" id="activeCount">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Device List -->
+                <div class="device-section">
+                    <h3>TRACKED DEVICES</h3>
+                    <div id="deviceList">
+                        <div style="color: #666; text-align: center; padding: 20px; font-size: 12px;">
+                            No devices detected<br>
+                            <small>Waiting for mesh traffic...</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Activity Log -->
+                <div class="device-section">
+                    <h3>ACTIVITY LOG</h3>
+                    <div class="log-area" id="activityLog">
+                        <div class="log-entry info">[INFO] Meshtastic Tracker initialized</div>
+                        <div class="log-entry info">[INFO] Attempting connection to backend...</div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <button class="button" onclick="refreshDevices()">🔄 REFRESH</button>
+                <button class="button" onclick="openFullInterface()"
+                    style="background: rgba(0, 191, 255, 0.2); border-color: #00bfff; color: #00bfff;">
+                    🗺️ OPEN FULL INTERFACE
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8001';
+        const API_KEY = 'kilo-dev-key-2025';
+        let devices = [];
+        let updateInterval = null;
+
+        function log(message, type = 'info') {
+            const logArea = document.getElementById('activityLog');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            logArea.appendChild(entry);
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+
+        async function checkConnection() {
+            try {
+                const response = await fetch(`${API_BASE}/api/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': API_KEY
+                    },
+                    body: JSON.stringify({ query: 'meshtastic status' })
+                });
+
+                if (response.ok) {
+                    // Parse JSON if it's JSON, otherwise fallback to text
+                    let data;
+                    const contentType = response.headers.get('content-type') || '';
+                    if (contentType.includes('application/json')) {
+                        data = await response.json();
+                    } else {
+                        const text = await response.text();
+                        data = { answer: text };
+                    }
+                    document.getElementById('statusText').textContent = 'CONNECTED';
+                    document.getElementById('connectionStatus').style.background = 'rgba(0, 255, 136, 0.3)';
+                    log('Connected to backend', 'success');
+                    startTracking();
+                } else {
+                    throw new Error('Connection failed');
+                }
+            } catch (error) {
+                document.getElementById('statusText').textContent = 'DEMO MODE';
+                document.getElementById('connectionStatus').style.background = 'rgba(255, 170, 0, 0.3)';
+                log('Backend offline - using demo mode', 'info');
+                startDemoMode();
+            }
+        }
+
+        function startTracking() {
+            refreshDevices();
+            updateInterval = setInterval(refreshDevices, 5000);
+        }
+
+        function startDemoMode() {
+            // Create demo devices
+            devices = [
+                {
+                    id: '!abc123',
+                    short_name: 'BASE',
+                    long_name: 'Base Station',
+                    latitude: 47.3977,
+                    longitude: 8.5456,
+                    battery_level: 95,
+                    snr: 8.5,
+                    rssi: -42,
+                    last_heard: new Date().toISOString()
+                },
+                {
+                    id: '!def456',
+                    short_name: 'NODE1',
+                    long_name: 'Field Node 1',
+                    latitude: 47.3980,
+                    longitude: 8.5460,
+                    battery_level: 78,
+                    snr: 6.2,
+                    rssi: -65,
+                    last_heard: new Date(Date.now() - 30000).toISOString()
+                },
+                {
+                    id: '!ghi789',
+                    short_name: 'NODE2',
+                    long_name: 'Field Node 2',
+                    latitude: 47.3975,
+                    longitude: 8.5462,
+                    battery_level: 45,
+                    snr: 4.1,
+                    rssi: -78,
+                    last_heard: new Date(Date.now() - 120000).toISOString()
+                }
+            ];
+
+            updateDeviceList();
+            log('Demo devices loaded', 'success');
+
+            // Simulate position updates
+            updateInterval = setInterval(() => {
+                devices.forEach(device => {
+                    device.latitude += (Math.random() - 0.5) * 0.0001;
+                    device.longitude += (Math.random() - 0.5) * 0.0001;
+                    device.battery_level = Math.max(0, device.battery_level - Math.random() * 0.1);
+                });
+                updateDeviceList();
+            }, 3000);
+        }
+
+        async function refreshDevices() {
+            try {
+                const response = await fetch(`${API_BASE}/api/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': API_KEY
+                    },
+                    body: JSON.stringify({ query: 'meshtastic devices nearby' })
+                });
+
+                if (response.ok) {
+                    let data;
+                    const contentType = response.headers.get('content-type') || '';
+                    if (contentType.includes('application/json')) {
+                        data = await response.json();
+                    } else {
+                        const text = await response.text();
+                        data = { answer: text };
+                    }
+                    const result = data.answer || data;
+                    if (result && result.devices) {
+                        devices = result.devices;
+                        updateDeviceList();
+                        log(`Updated: ${devices.length} devices found`, 'success');
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching devices:', error);
+            }
+        }
+
+        function updateDeviceList() {
+            const listContainer = document.getElementById('deviceList');
+            document.getElementById('deviceCount').textContent = devices.length;
+
+            const activeDevices = devices.filter(d => {
+                const lastHeard = new Date(d.last_heard);
+                const now = new Date();
+                return (now - lastHeard) < 300000; // Active if heard in last 5 minutes
+            });
+            document.getElementById('activeCount').textContent = activeDevices.length;
+
+            if (devices.length === 0) {
+                listContainer.innerHTML = `
+                    <div style="color: #666; text-align: center; padding: 20px; font-size: 12px;">
+                        No devices detected<br>
+                        <small>Waiting for mesh traffic...</small>
+                    </div>
+                `;
+                return;
+            }
+
+            listContainer.innerHTML = devices.map(device => {
+                const batteryClass = device.battery_level > 70 ? 'battery-high' :
+                    device.battery_level > 30 ? 'battery-medium' : 'battery-low';
+                const lastHeard = new Date(device.last_heard);
+                const minutesAgo = Math.floor((new Date() - lastHeard) / 60000);
+
+                return `
+                    <div class="device-item" onclick="focusDevice('${device.id}')">
+                        <div class="device-header">
+                            <div>
+                                <div class="device-name">${device.short_name || device.id}</div>
+                                <div class="device-id">${device.id}</div>
+                            </div>
+                        </div>
+                        <div class="device-stats">
+                            <div class="device-stat">
+                                <span class="device-stat-label">Battery:</span>
+                                <span class="${batteryClass}">${device.battery_level.toFixed(0)}%</span>
+                            </div>
+                            <div class="device-stat">
+                                <span class="device-stat-label">SNR:</span>
+                                <span>${device.snr ? device.snr.toFixed(1) : '---'} dB</span>
+                            </div>
+                            <div class="device-stat">
+                                <span class="device-stat-label">Position:</span>
+                                <span>${device.latitude ? device.latitude.toFixed(4) : '---'}, ${device.longitude ? device.longitude.toFixed(4) : '---'}</span>
+                            </div>
+                            <div class="device-stat">
+                                <span class="device-stat-label">Last Heard:</span>
+                                <span>${minutesAgo < 1 ? 'Just now' : minutesAgo + 'm ago'}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function focusDevice(deviceId) {
+            const device = devices.find(d => d.id === deviceId);
+            if (device) {
+                log(`Focused on device: ${device.short_name || device.id}`, 'info');
+            }
+        }
+
+        function openFullInterface() {
+            window.location.href = 'http://localhost:4200/mesh-tracker';
+        }
+
+        // Initialize
+        window.onload = () => {
+            log('Initializing Meshtastic tracker...', 'info');
+            setTimeout(checkConnection, 500);
+        };
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,137 @@
+<div class="mission-planner-overlay" (click)="closeModal()">
+    <div class="mission-planner-modal" (click)="$event.stopPropagation()">
+        <!-- Header -->
+        <div class="modal-header">
+            <h2 class="modal-title">
+                <span class="title-icon">🗺️</span>
+                MISSION PLANNER
+            </h2>
+            <button class="close-button" (click)="closeModal()">✕</button>
+        </div>
+
+        <!-- Content -->
+        <div class="modal-content">
+            <!-- Map Container -->
+            <div class="map-section">
+                <div #mapContainer class="map-container"></div>
+
+                <!-- Map Controls Overlay -->
+                <div class="map-controls">
+                    <div class="control-group">
+                        <label>Altitude</label>
+                        <input type="number" [(ngModel)]="customAltitude" min="5" max="100" step="5"
+                            class="altitude-input">
+                        <span>meters</span>
+                    </div>
+
+                    <div class="control-group">
+                        <button class="map-control-btn" (click)="clearWaypoints()">
+                            <span class="btn-icon">🗑️</span>
+                            Clear All
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Waypoint Counter -->
+                <div class="waypoint-counter">
+                    <span class="counter-icon">📍</span>
+                    <span class="counter-value">{{ waypoints.length }}</span>
+                    <span class="counter-label">WAYPOINTS</span>
+                </div>
+            </div>
+
+            <!-- Mission Presets Panel -->
+            <div class="presets-panel">
+                <h3 class="panel-title">MISSION PRESETS</h3>
+
+                <div class="presets-grid">
+                    @for (preset of missionPresets; track preset.action) {
+                    <div class="preset-card" [class.selected]="selectedPreset === preset.action"
+                        (click)="selectPreset(preset)">
+                        <div class="preset-icon">{{ preset.icon }}</div>
+                        <div class="preset-name">{{ preset.name }}</div>
+                        <div class="preset-description">{{ preset.description }}</div>
+                    </div>
+                    }
+                </div>
+
+                <!-- Perimeter Size Selector -->
+                @if (selectedPreset === 'perimeter') {
+                <div class="preset-options">
+                    <h4>Perimeter Size</h4>
+                    <div class="size-selector">
+                        <label class="size-option">
+                            <input type="radio" name="perimeter" value="small" [(ngModel)]="perimeter"
+                                (change)="generatePerimeterMission()">
+                            <span>Small (~10m)</span>
+                        </label>
+                        <label class="size-option">
+                            <input type="radio" name="perimeter" value="medium" [(ngModel)]="perimeter"
+                                (change)="generatePerimeterMission()">
+                            <span>Medium (~20m)</span>
+                        </label>
+                        <label class="size-option">
+                            <input type="radio" name="perimeter" value="large" [(ngModel)]="perimeter"
+                                (change)="generatePerimeterMission()">
+                            <span>Large (~30m)</span>
+                        </label>
+                    </div>
+                </div>
+                }
+
+                <!-- Check-In Scheduler -->
+                @if (selectedPreset === 'checkin') {
+                <div class="preset-options">
+                    <h4>Check-In Schedule</h4>
+                    <div class="checkin-scheduler">
+                        <label>
+                            Return in:
+                            <input type="number" [(ngModel)]="checkinTime" min="5" max="180" step="5"
+                                class="time-input">
+                            minutes
+                        </label>
+                        <button class="schedule-btn" (click)="setupCheckinMission()">
+                            <span class="btn-icon">⏰</span>
+                            Schedule Check-In
+                        </button>
+                    </div>
+                </div>
+                }
+
+                <!-- Manual Instructions -->
+                @if (selectedPreset === null) {
+                <div class="manual-instructions">
+                    <p><strong>Manual Waypoint Mode</strong></p>
+                    <p>Click on the map to add waypoints. Click markers to remove them.</p>
+                    <p>Waypoints will be flown in order.</p>
+                </div>
+                }
+            </div>
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="modal-footer">
+            <div class="footer-info">
+                @if (waypoints.length > 0) {
+                <span class="info-text">
+                    Mission: {{ waypoints.length }} waypoints at {{ customAltitude }}m altitude
+                </span>
+                } @else {
+                <span class="info-text warning">
+                    No waypoints set. Click map or select a preset.
+                </span>
+                }
+            </div>
+
+            <div class="footer-actions">
+                <button class="action-button cancel" (click)="closeModal()">
+                    Cancel
+                </button>
+                <button class="action-button execute" (click)="executeMission()" [disabled]="waypoints.length === 0">
+                    <span class="btn-icon">🚁</span>
+                    Execute Mission
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
