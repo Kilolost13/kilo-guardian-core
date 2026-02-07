@@ -1,7 +1,7 @@
 import os
 import httpx
 
-GATEWAY_URL = os.getenv("GATEWAY_URL", "http://gateway:9000")
+GATEWAY_URL = os.getenv("GATEWAY_URL", "http://gateway:8000")
 
 
 def validate_token(token: str) -> bool:

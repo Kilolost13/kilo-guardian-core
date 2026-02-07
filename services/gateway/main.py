@@ -27,7 +27,7 @@ app.add_middleware(
 )
 
 # admin tokens DB (simple centralized token store for admin UI/automation)
-DB_URL = os.getenv("GATEWAY_DB_URL", "sqlite:////tmp/gateway.db")
+DB_URL = os.getenv("GATEWAY_DB_URL", "sqlite:////data/gateway.db")
 engine = create_engine(DB_URL, echo=False)
 
 
@@ -41,6 +41,8 @@ class AdminToken(SQLModel, table=True):
 
 @app.on_event("startup")
 def startup():
+    # Ensure /data directory exists for database
+    os.makedirs("/data", exist_ok=True)
     try:
         SQLModel.metadata.create_all(engine)
     except Exception:
@@ -192,17 +194,17 @@ async def status():
     return {"status": "ok"}
 
 SERVICE_URLS = {
-    "meds": os.getenv("MEDS_URL", "http://docker_meds_1:9001"),
-    "reminder": os.getenv("REMINDER_URL", "http://docker_reminder_1:9002"),
-    "reminders": os.getenv("REMINDER_URL", "http://docker_reminder_1:9002"),  # Alias for plural
-    "habits": os.getenv("HABITS_URL", "http://docker_habits_1:9003"),
-    "ai_brain": os.getenv("AI_BRAIN_URL", "http://docker_ai_brain_1:9004"),
-    "financial": os.getenv("FINANCIAL_URL", "http://docker_financial_1:9005"),
-    "library_of_truth": os.getenv("LIBRARY_OF_TRUTH_URL", "http://docker_library_of_truth_1:9006"),
-    "cam": os.getenv("CAM_URL", "http://docker_cam_1:9007"),
-    "ml": os.getenv("ML_ENGINE_URL", "http://docker_ml_engine_1:9008"),
-    "voice": os.getenv("VOICE_URL", "http://docker_voice_1:9009"),
-    "usb": os.getenv("USB_TRANSFER_URL", "http://docker_usb_transfer_1:8006"),
+    "meds": os.getenv("MEDS_URL", "http://meds:9001"),
+    "reminder": os.getenv("REMINDER_URL", "http://reminder:9002"),
+    "reminders": os.getenv("REMINDER_URL", "http://reminder:9002"),  # Alias for plural
+    "habits": os.getenv("HABITS_URL", "http://habits:9003"),
+    "ai_brain": os.getenv("AI_BRAIN_URL", "http://ai_brain:9004"),
+    "financial": os.getenv("FINANCIAL_URL", "http://financial:9005"),
+    "library_of_truth": os.getenv("LIBRARY_OF_TRUTH_URL", "http://library_of_truth:9006"),
+    "cam": os.getenv("CAM_URL", "http://cam:9007"),
+    "ml": os.getenv("ML_ENGINE_URL", "http://ml_engine:9008"),
+    "voice": os.getenv("VOICE_URL", "http://voice:9009"),
+    "usb": os.getenv("USB_TRANSFER_URL", "http://usb_transfer:8006"),
 }
 
 @app.get("/health")
