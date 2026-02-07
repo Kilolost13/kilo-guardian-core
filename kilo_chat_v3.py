@@ -16,13 +16,12 @@ import threading
 import subprocess
 import os
 
-# Import new modules
-from kilo_memory import get_kilo_memory
-from kilo_router import get_kilo_router
+# Import new modules from core
+from core.kilo_memory import get_kilo_memory
+from core.kilo_router import get_kilo_router
 
-LLM_URL = "http://localhost:11434"
-KUBECONFIG = os.path.expanduser("~/.kube/hp-k3s-config")
-HP_IP = "192.168.68.56"
+# Import configuration
+from shared.config import LLM_URL, KUBECONFIG, HP_IP
 
 class KiloChat:
     def __init__(self, root):

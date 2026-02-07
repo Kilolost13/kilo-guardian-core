@@ -26,6 +26,9 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 from collections import defaultdict
 
+# Import shared configuration
+from shared.config import SERVICE_PORTS, K3S_NAMESPACE
+
 
 class KiloProactiveAgent:
     """
@@ -56,20 +59,15 @@ class KiloProactiveAgent:
         self.session = requests.Session()
         self.session.headers.update({'Content-Type': 'application/json'})
 
-        # Service ports (when accessing directly)
-        self.service_ports = {
-            'reminder': 9002,
-            'financial': 9005,
-            'habits': 9000,
-            'meds': 9001
-        }
+        # Use shared service ports
+        self.service_ports = SERVICE_PORTS
 
-        # Or K3s service DNS names (when running on cluster host)
+        # K3s service DNS names (when running on cluster host)
         self.service_hosts = {
-            'reminder': 'kilo-reminder.kilo-guardian.svc.cluster.local',
-            'financial': 'kilo-financial.kilo-guardian.svc.cluster.local',
-            'habits': 'kilo-habits.kilo-guardian.svc.cluster.local',
-            'meds': 'kilo-meds.kilo-guardian.svc.cluster.local'
+            'reminder': f'kilo-reminder.{K3S_NAMESPACE}.svc.cluster.local',
+            'financial': f'kilo-financial.{K3S_NAMESPACE}.svc.cluster.local',
+            'habits': f'kilo-habits.{K3S_NAMESPACE}.svc.cluster.local',
+            'meds': f'kilo-meds.{K3S_NAMESPACE}.svc.cluster.local'
         }
 
         # Track what we've already notified about (avoid spam)
