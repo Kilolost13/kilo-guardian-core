@@ -1,12 +1,17 @@
 FROM python:3.11-slim
 RUN mkdir -p /app
 WORKDIR /app
-COPY pyproject.toml .
+# Copy shared models first
+COPY shared /app/shared
+# Copy service code
+COPY services/habits /app/habits
+WORKDIR /app/habits
+# Install dependencies
 RUN pip install --upgrade pip && pip install poetry && poetry config virtualenvs.create false && poetry install --no-interaction --no-root
-COPY . .
 RUN mkdir -p /data
 RUN apt-get update && rm -rf /var/lib/apt/lists/*
-COPY ./wait-for-advanced.py /app/wait-for-advanced.py
-COPY wait-for.sh /app/wait-for.sh
+COPY services/habits/wait-for-advanced.py /app/wait-for-advanced.py
+COPY services/habits/wait-for.sh /app/wait-for.sh
 RUN chmod +x /app/wait-for-advanced.py /app/wait-for.sh || true
+ENV PYTHONPATH=/app
 CMD ["/app/wait-for.sh"]
