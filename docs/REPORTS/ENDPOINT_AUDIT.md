@@ -20,23 +20,23 @@ This audit documents all API endpoints across the Kilo Guardian system, identify
 
 ## 1. Gateway Service (Port 8000)
 
-**Container:** `docker_gateway_1:8000`
+**Container:** `kilo-gateway:8000`
 **Role:** Central routing proxy for all microservices
 
 ### Gateway Routes Configuration
 ```python
 SERVICE_URLS = {
-    "meds": "http://docker_meds_1:9001",
-    "reminder": "http://docker_reminder_1:9002",
-    "reminders": "http://docker_reminder_1:9002",  # Alias
-    "habits": "http://docker_habits_1:9003",
-    "ai_brain": "http://docker_ai_brain_1:9004",
-    "financial": "http://docker_financial_1:9005",
-    "library_of_truth": "http://docker_library_of_truth_1:9006",
-    "cam": "http://docker_cam_1:9007",
-    "ml": "http://docker_ml_engine_1:9008",
-    "voice": "http://docker_voice_1:9009",
-    "usb": "http://docker_usb_transfer_1:8006"
+    "meds": "http://kilo-meds:9001",
+    "reminder": "http://kilo-reminder:9002",
+    "reminders": "http://kilo-reminder:9002",  # Alias
+    "habits": "http://kilo-habits:9003",
+    "ai_brain": "http://kilo-ai-brain:9004",
+    "financial": "http://kilo-financial:9005",
+    "library_of_truth": "http://kilo-library:9006",
+    "cam": "http://kilo-cam:9007",
+    "ml": "http://kilo-ml-engine:9008",
+    "voice": "http://kilo-voice:9009",
+    "usb": "http://kilo-usb-transfer:8006"
 }
 ```
 

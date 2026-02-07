@@ -285,7 +285,7 @@ def query_habits_service() -> Dict[str, Any]:
         Dictionary with habits list and completion status
     """
     try:
-        habits_url = os.environ.get("HABITS_URL", "http://kilo-habits:9000")
+        habits_url = os.environ.get("HABITS_URL", "http://kilo-habits:9003")
         response = httpx.get(f"{habits_url}/", timeout=10)  # Fixed: Use / not /habits
         response.raise_for_status()
         habits = response.json()
