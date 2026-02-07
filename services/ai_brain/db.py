@@ -1,4 +1,9 @@
 """Database module for AI Brain - imports from shared.db for consistency."""
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+
 from shared.db import get_engine, get_session  # noqa: F401
 
 
@@ -24,4 +29,3 @@ def init_db(env_var_name: str = 'AI_BRAIN_DB_URL', fallback_db_url: str = 'sqlit
     except Exception:
         # Fail silently during import-time checks; errors will be logged elsewhere
         pass
-
