@@ -111,7 +111,7 @@ class AgentCommandHandler:
         self.service_ports = {
             'reminder': 9002,
             'financial': 9005,
-            'habits': 9000,
+            'habits': 9003,
             'meds': 9001
         }
 
