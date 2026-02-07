@@ -8,7 +8,6 @@ import os
 import sys
 from sqlalchemy import create_engine
 from sqlalchemy.pool import StaticPool
-from typing import Optional
 
 _engine_cache = {}
 
