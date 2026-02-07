@@ -24,5 +24,8 @@ export HABITS_URL="http://$HABITS_IP:9000"
 export MEDS_URL="http://$MEDS_IP:9001"
 export AI_BRAIN_URL="http://localhost:9200"  # Agent API service
 
+# Change to repo root directory to ensure shared package can be imported
+cd ~/kilo-guardian-core
+
 # Run the agent
-python3 ~/kilo_proactive_agent.py "$@"
+python3 kilo_proactive_agent.py "$@"

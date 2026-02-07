@@ -149,7 +149,9 @@ services:
   habits:
     container_name: kilo_habits
     image: kilo/habits:latest
-    build: ../../services/habits
+    build:
+      context: ../..
+      dockerfile: services/habits/Dockerfile
     ports:
       - "9003:9003"
     environment:
@@ -191,7 +193,9 @@ services:
   meds:
     container_name: kilo_meds
     image: kilo/meds:latest
-    build: ../../services/meds
+    build:
+      context: ../..
+      dockerfile: services/meds/Dockerfile
     ports:
       - "9001:9001"
     environment:
