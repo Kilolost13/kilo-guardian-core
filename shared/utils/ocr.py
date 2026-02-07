@@ -2,7 +2,7 @@ import re
 import cv2
 import numpy as np
 from PIL import Image
-from typing import List, Dict, Optional, Tuple
+from typing import Any, List, Dict, Optional, Tuple
 
 def preprocess_image_for_ocr(image: Image.Image) -> Image.Image:
     """Preprocess image to improve OCR accuracy."""
