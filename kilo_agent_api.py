@@ -18,12 +18,20 @@ import httpx
 import os
 import uvicorn
 
+# Import configuration
+from shared.config import KILO_IP, BEELINK_IP, SERVICE_PORTS
+
 app = FastAPI(title="Kilo Agent API", version="1.0.0")
 
-# CORS for frontend access
+# CORS for frontend access - restricted to known origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:30000",
+        f"http://{KILO_IP}:30000",
+        f"http://{BEELINK_IP}:30000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -79,14 +87,8 @@ def get_service_url(service: str) -> str:
     if url:
         return url
 
-    # Default ports
-    ports = {
-        'reminder': 9002,
-        'financial': 9005,
-        'habits': 9000,
-        'meds': 9001
-    }
-    port = ports.get(service, 9000)
+    # Use shared configuration
+    port = SERVICE_PORTS.get(service, 9000)
     return f"http://localhost:{port}"
 
 

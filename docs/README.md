@@ -1,169 +1,91 @@
-# AI Memory Assistant - Documentation Index
-
-Generated on: 2025-12-24 08:01:57
+# Kilo Guardian - Documentation Index
 
 ## 📚 Documentation Overview
 
-This documentation provides comprehensive information about the AI Memory Assistant system, designed for air-gapped deployment and local operation.
+This documentation provides comprehensive information about the Kilo Guardian system, a K3s-deployed AI assistant for personal life management.
 
 ## 🚀 Quick Start
 
-### For Users
-1. **[User Guide](user_guide.md)** - Learn how to use the AI Memory Assistant
-2. **[Deployment Guide](deployment.md)** - Get the system running locally
-3. **[Troubleshooting Guide](troubleshooting.md)** - Solve common issues
+### System Architecture
+- **K3s Deployment**: Microservices running on K3s cluster
+- **Backend**: FastAPI-based Python microservices
+- **Frontend**: React application at `frontend/kilo-react-frontend`
+- **Database**: SQLite with SQLModel (SQLAlchemy-based ORM)
+- **LLM**: Ollama running on dedicated hardware
 
-### For Developers
-1. **[Developer Guide](developer_guide.md)** - Understand the codebase and architecture
-2. **[API Documentation](api.md)** - Technical API reference
-3. **[Model Documentation](models.md)** - Data models and database schema
+### Key Services
+1. **AI Brain** - Core intelligence and conversation handling
+2. **Gateway** - API router and central entry point
+3. **Library of Truth** - Knowledge base and PDF storage
+4. **Reminder** - Timeline and reminders
+5. **Habits** - Habit tracking and analytics
+6. **Meds** - Medication management
+7. **Financial** - Budget and transaction tracking
+8. **Camera** - Camera and pose detection
+9. **Voice** - Voice input processing
+10. **ML Engine** - ML processing
+11. **SocketIO Relay** - Real-time communication
 
-## 📖 Detailed Documentation
-
-### User-Focused
-- **[User Guide](user_guide.md)** - Complete user manual with tutorials
-- **[Troubleshooting Guide](troubleshooting.md)** - Problem-solving and diagnostics
-- **[Deployment Guide](deployment.md)** - Installation and setup instructions
-
-### Developer-Focused
-- **[Developer Guide](developer_guide.md)** - Architecture, development workflow, and best practices
-- **[API Documentation](api.md)** - REST API endpoints and usage examples
-- **[Model Documentation](models.md)** - Database schema and data relationships
-
-### System Documentation
-- **Architecture Overview** - High-level system design
-- **Security Guidelines** - Security best practices and implementation
-- **Performance Tuning** - Optimization techniques and monitoring
-
-## 🛠️ Development Resources
-
-### Testing
-- Run comprehensive tests: `python3 test_suite.py`
-- Run unit tests: `python3 -m pytest tests/unit_tests.py`
-- Run CI/CD pipeline: `./local_ci.sh`
-
-### Code Quality
-- Follow PEP 8 for Python code
-- Use TypeScript for frontend development
-- Write tests for all new features
-- Update documentation for changes
+## 🔧 Development
 
 ### Local Development
 ```bash
-# Backend
-cd ai-memory-assistant
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python3 ai_brain/main.py
+# Backend services (individual service)
+cd services/ai_brain
+python3 main.py
 
 # Frontend
-cd front\ end/kilo-react-frontend
+cd frontend/kilo-react-frontend
 npm install
 npm start
 ```
 
-## 🔧 System Architecture
+### Deployment
+```bash
+# Deploy all services to K3s
+./scripts/deploy-to-k3s.sh
 
-### Backend Components
-- **AI Brain**: Core intelligence and conversation handling
-- **Memory System**: Vector search and knowledge retrieval
-- **Database Layer**: PostgreSQL with SQLAlchemy ORM
-- **API Layer**: FastAPI with automatic documentation
+# Check service status
+kubectl get pods -n kilo-guardian
+```
 
-### Frontend Components
-- **React Application**: Modern single-page application
-- **Real-time Features**: Socket.IO for live updates
-- **Voice Interface**: Speech recognition and synthesis
-- **Data Visualization**: Interactive charts and graphs
-
-### Infrastructure
-- **Containerized**: Docker deployment with docker-compose
-- **Database**: PostgreSQL for data persistence
-- **Caching**: Redis for performance optimization (optional)
-- **Reverse Proxy**: Nginx for production deployment
-
-## 📊 Key Features
+## 📊 System Features
 
 ### AI & Memory
 - Conversational AI with context awareness
 - Long-term memory with vector embeddings
-- Knowledge graph visualization
-- Smart search and retrieval
+- Knowledge base integration
+- RAG-based information retrieval
 
 ### Health & Wellness
 - Medication tracking and reminders
 - Habit formation and monitoring
 - Goal setting and progress tracking
-- Health data integration
 
 ### User Experience
 - Voice-controlled interface
 - Real-time updates and notifications
-- Responsive mobile design
-- Offline-capable progressive web app
+- Responsive web interface
 
-### Security & Privacy
-- End-to-end encryption
-- Local data storage (air-gapped)
-- User authentication and authorization
-- Data export and backup capabilities
+### Infrastructure
+- K3s orchestration
+- SQLite + SQLModel for data persistence
+- FastAPI for all microservices
+- No Redis or PostgreSQL dependencies
 
-## 🚨 Important Notes
+## 🛠️ Tech Stack
 
-### Air-Gapped Design
-This system is specifically designed for air-gapped environments:
-- No external API dependencies
-- All data stored locally
-- No telemetry or external communications
-- Self-contained operation
+- **Backend**: Python 3, FastAPI, SQLModel
+- **Frontend**: React, TypeScript
+- **Database**: SQLite (file-based, no server)
+- **Container Orchestration**: K3s (lightweight Kubernetes)
+- **LLM**: Ollama (local, air-gapped capable)
 
-### Security Considerations
-- Regular security updates recommended
-- Backup critical data regularly
-- Monitor system logs for anomalies
-- Use strong authentication credentials
+## 📈 Hardware Setup
 
-### Performance Guidelines
-- Monitor system resources regularly
-- Scale database as data grows
-- Optimize queries for large datasets
-- Consider caching for frequently accessed data
+The system runs on two PCs:
+- **Beelink** (192.168.68.60): Overseer/agent, Ollama LLM server
+- **HP** (192.168.68.56): K3s cluster worker node
 
-## 📞 Support & Contributing
+See the main [README.md](../README.md) for complete architecture details and operational guide.
 
-### Getting Help
-1. Check the [Troubleshooting Guide](troubleshooting.md)
-2. Review system logs for error messages
-3. Run the test suite to identify issues
-4. Check the [Developer Guide](developer_guide.md) for technical details
-
-### Contributing
-1. Follow the development workflow in the [Developer Guide](developer_guide.md)
-2. Write tests for new features
-3. Update documentation as needed
-4. Submit pull requests with clear descriptions
-
-### Reporting Issues
-When reporting bugs or issues, please include:
-- System information and versions
-- Steps to reproduce the problem
-- Full error messages and logs
-- Expected vs. actual behavior
-
----
-
-## 📈 System Status
-
-**Last Updated:** 2025-12-24 08:01:57
-
-- ✅ **Backend Services**: Operational
-- ✅ **Database**: Connected
-- ✅ **Frontend**: Built and deployed
-- ✅ **Tests**: Comprehensive test suite available
-- ✅ **Documentation**: Complete and up-to-date
-- ✅ **Security**: Air-gapped and encrypted
-
----
-
-*This documentation is automatically generated and kept up-to-date with the codebase. For the latest information, regenerate the docs using the documentation generator.*

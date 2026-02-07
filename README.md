@@ -219,8 +219,8 @@ See [docs/OPERATIONS.md](docs/OPERATIONS.md) for comprehensive operations guide.
 ## 🔍 Project Structure
 
 ```
-Kilo_Ai_microservice/
-├── services/              # 13 microservice implementations
+kilo-guardian-core/
+├── services/              # Microservice implementations
 │   ├── ai_brain/         # RAG & memory search
 │   ├── cam/              # Camera & pose detection
 │   ├── financial/        # Budget & transaction tracking
@@ -232,7 +232,8 @@ Kilo_Ai_microservice/
 │   ├── reminder/         # Timeline & reminders
 │   ├── socketio-relay/   # Real-time communication
 │   ├── usb_transfer/     # File transfer service
-│   └── voice/            # Voice input processing
+│   ├── voice/            # Voice input processing
+│   └── k3s_manager/      # K3s cluster management
 │
 ├── frontend/             # React frontend
 │   └── kilo-react-frontend/
@@ -242,27 +243,43 @@ Kilo_Ai_microservice/
 │       │   └── services/
 │       └── public/
 │
+├── core/                 # Core agent functionality
+│   ├── kilo_agent.py    # Main agent logic
+│   ├── kilo_agent_brain.py
+│   ├── kilo_agent_ui.py # UI interface (canonical)
+│   ├── kilo_memory.py   # Memory management
+│   ├── kilo_router.py   # Command routing
+│   └── kilo_pod_access.py
+│
+├── shared/               # Shared utilities & config
+│   ├── config.py        # Centralized configuration
+│   ├── db.py            # Unified database access (SQLModel)
+│   ├── models/          # Shared data models
+│   └── utils/           # Helper functions
+│
 ├── k3s/                  # Kubernetes manifests
 │   ├── deployments/
 │   ├── services/
 │   └── configmaps/
 │
-├── docs/                 # Comprehensive documentation
+├── docs/                 # Documentation
 │   ├── ROADMAPS/        # Future planning
 │   ├── REPORTS/         # Historical reports
 │   └── *.md             # Current documentation
 │
-├── shared/               # Shared utilities
-│   ├── models/          # Database models
-│   ├── tools/           # Common tools
-│   └── utils/           # Helper functions
-│
 ├── scripts/              # Operational scripts
-│   ├── k8s-status.sh
-│   ├── k8s-logs.sh
-│   └── k8s-restart.sh
+│   ├── deploy-to-k3s.sh
+│   ├── check-status.sh
+│   └── launch_*.sh
 │
-└── tests/                # Test suite
+├── legacy/               # Legacy/experimental code
+│   ├── v1/              # Old version 1
+│   ├── v2/              # Old version 2
+│   └── *.py             # Archived experiments
+│
+├── kilo_agent_api.py     # Agent API service
+├── kilo_proactive_agent.py # Proactive monitoring agent
+└── start-proactive-agent.sh # Agent startup script
 
 ```
 

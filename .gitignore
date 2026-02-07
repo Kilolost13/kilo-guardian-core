@@ -10,6 +10,8 @@ env/
 ENV/
 .venv/
 *.venv
+agent-venv/
+core/agent-venv/
 
 # Environment variables and secrets
 .env
