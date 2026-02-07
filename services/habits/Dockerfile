@@ -6,7 +6,7 @@ COPY shared /app/shared
 # Copy service code
 COPY services/habits /app/habits
 WORKDIR /app/habits
-# Install dependencies
+# Install dependencies (pyproject.toml is now in /app/habits)
 RUN pip install --upgrade pip && pip install poetry && poetry config virtualenvs.create false && poetry install --no-interaction --no-root
 RUN mkdir -p /data
 RUN apt-get update && rm -rf /var/lib/apt/lists/*

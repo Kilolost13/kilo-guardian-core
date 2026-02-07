@@ -6,7 +6,7 @@ COPY shared /app/shared
 # Copy service code
 COPY services/meds /app/meds
 WORKDIR /app/meds
-# Install dependencies
+# Install dependencies (pyproject.toml is now in /app/meds)
 RUN pip install --upgrade pip && pip install poetry && poetry config virtualenvs.create false && poetry install --no-interaction --no-root
 RUN mkdir -p /data
 RUN apt-get update && apt-get install -y \
