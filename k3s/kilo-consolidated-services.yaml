@@ -82,7 +82,7 @@ spec:
         - name: PYTHONPATH
           value: "/shared_repo"
         ports:
-        - containerPort: 9000
+        - containerPort: 9001
         envFrom:
         - configMapRef:
             name: kilo-config
@@ -172,7 +172,7 @@ spec:
         - name: PYTHONPATH
           value: "/shared_repo"
         ports:
-        - containerPort: 9000
+        - containerPort: 9003
         envFrom:
         - configMapRef:
             name: kilo-config

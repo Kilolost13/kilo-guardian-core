@@ -21,7 +21,7 @@ K3S_NAMESPACE = "kilo-guardian"
 
 # ==================== Service Ports ====================
 SERVICE_PORTS = {
-    "habits": 9000,
+    "habits": 9003,
     "meds": 9001,
     "reminder": 9002,
     "financial": 9005,
@@ -31,6 +31,7 @@ SERVICE_PORTS = {
     "ml_engine": 9008,
     "voice": 9009,
     "socketio": 9010,
+    "usb_transfer": 8006,
     "gateway": 8000,
     "ollama": 11434,
 }

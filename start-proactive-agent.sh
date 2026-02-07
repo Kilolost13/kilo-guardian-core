@@ -12,7 +12,7 @@ AI_BRAIN_IP=$(sudo kubectl get svc -n kilo-guardian kilo-ai-brain -o jsonpath='{
 echo "🔧 Service ClusterIPs:"
 echo "  Reminder: $REMINDER_IP:9002"
 echo "  Financial: $FINANCIAL_IP:9005"
-echo "  Habits: $HABITS_IP:9000"
+echo "  Habits: $HABITS_IP:9003"
 echo "  Meds: $MEDS_IP:9001"
 echo "  AI Brain: $AI_BRAIN_IP:9004"
 echo
@@ -20,7 +20,7 @@ echo
 # Set environment variables for the agent
 export REMINDER_URL="http://$REMINDER_IP:9002"
 export FINANCIAL_URL="http://$FINANCIAL_IP:9005"
-export HABITS_URL="http://$HABITS_IP:9000"
+export HABITS_URL="http://$HABITS_IP:9003"
 export MEDS_URL="http://$MEDS_IP:9001"
 export AI_BRAIN_URL="http://localhost:9200"  # Agent API service
 
